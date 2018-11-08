@@ -163,7 +163,11 @@
     <ClCompile Include="src\os.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\structs\BiosParameterBlock.h" />
+    <ClInclude Include="src\structs\DirectoryEntry.h" />
     <ClInclude Include="src\Fat.h" />
+    <ClInclude Include="src\structs\MasterBootRecord.h" />
+    <ClInclude Include="src\structs\PartitionTableEntry.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

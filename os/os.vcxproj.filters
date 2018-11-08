@@ -26,5 +26,17 @@
     <ClInclude Include="src\Fat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\structs\BiosParameterBlock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\DirectoryEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\PartitionTableEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\MasterBootRecord.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
