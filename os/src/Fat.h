@@ -4,20 +4,21 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "structs/BiosParameterBlock.h"
-#include "structs/DirectoryEntry.h"
-#include "structs/MasterBootRecord.h"
+#include "structs/AllStucts.h"
 
 class Fat
 {
 public:
 	~Fat ();
-	void readPartition ();
 	Fat (const std::string& imgName);
-	void readBlock (const uint32_t& partitionOffset);
-	
+	void readPartitionBootSector ();
+	void readMFT (const int& VCN);	
+
+
+
 	std::fstream discImg;
-	MasterBootRecord mbr;
-	BiosParameterBlock bpb;
+	PartitionBootSector pbs;
+	CommonHeaderPart chp;
+	static const uint32_t MFT_SIZE_B;
 };
 

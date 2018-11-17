@@ -163,11 +163,16 @@
     <ClCompile Include="src\os.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\structs\BiosParameterBlock.h" />
-    <ClInclude Include="src\structs\DirectoryEntry.h" />
+    <ClInclude Include="src\structs\AllStucts.h" />
+    <ClInclude Include="src\structs\fat32\BiosParameterBlock.h" />
+    <ClInclude Include="src\structs\fat32\DirectoryEntry.h" />
     <ClInclude Include="src\Fat.h" />
-    <ClInclude Include="src\structs\MasterBootRecord.h" />
-    <ClInclude Include="src\structs\PartitionTableEntry.h" />
+    <ClInclude Include="src\structs\fat32\MasterBootRecord.h" />
+    <ClInclude Include="src\structs\fat32\PartitionTableEntry.h" />
+    <ClInclude Include="src\structs\ntfs\CommonHeaderPart.h" />
+    <ClInclude Include="src\structs\ntfs\NonResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\PartitionBootSector.h" />
+    <ClInclude Include="src\structs\ntfs\ResidentHeader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

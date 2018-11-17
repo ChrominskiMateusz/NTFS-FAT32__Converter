@@ -26,16 +26,31 @@
     <ClInclude Include="src\Fat.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\structs\BiosParameterBlock.h">
+    <ClInclude Include="src\structs\fat32\BiosParameterBlock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\structs\DirectoryEntry.h">
+    <ClInclude Include="src\structs\fat32\DirectoryEntry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\structs\PartitionTableEntry.h">
+    <ClInclude Include="src\structs\fat32\MasterBootRecord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\structs\MasterBootRecord.h">
+    <ClInclude Include="src\structs\fat32\PartitionTableEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\PartitionBootSector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\AllStucts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\CommonHeaderPart.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\ResidentHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\NonResidentHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

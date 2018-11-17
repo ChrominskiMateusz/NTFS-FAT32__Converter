@@ -15,5 +15,6 @@ struct PartitionTableEntry
 	uint16_t endSectorCylinder;
 	
 	uint32_t startLba;
+
 	uint32_t length;
 };

@@ -4,7 +4,7 @@
 
 struct BiosParameterBlock
 {
-	uint8_t jump[3];					//  7E00h offset
+	uint8_t jump[3];
 	uint8_t softName[8];
 	uint16_t bytesPerSector;
 	uint8_t sectorsPerCluster;
