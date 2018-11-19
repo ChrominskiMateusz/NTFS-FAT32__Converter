@@ -33,7 +33,7 @@ void Converter::readMFT (const int& VCN)
 
 const uint16_t Converter::MFT_SIZE_B = 0x400;
 const uint8_t Converter::RESERVED_MFT = 0x23;
-const uint8_t Converter::END_MARKER = 0xFF;
+const uint16_t Converter::END_MARKER = 0xFFFF;
 
 
 

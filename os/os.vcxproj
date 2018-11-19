@@ -160,7 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Converter.cpp" />
-    <ClCompile Include="src\os.cpp" />
+    <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\structs\AllStucts.h" />
@@ -169,11 +169,14 @@
     <ClInclude Include="src\Converter.h" />
     <ClInclude Include="src\structs\mbr\MasterBootRecord.h" />
     <ClInclude Include="src\structs\mbr\PartitionTableEntry.h" />
-    <ClInclude Include="src\structs\ntfs\CommonHeaderPart.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\header\CommonHeaderPart.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\FileName.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\ObjectID.h" />
     <ClInclude Include="src\structs\ntfs\MFTHeader.h" />
-    <ClInclude Include="src\structs\ntfs\NonResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\header\NonResidentHeader.h" />
     <ClInclude Include="src\structs\ntfs\PartitionBootSector.h" />
-    <ClInclude Include="src\structs\ntfs\ResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\header\ResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\StandardInformation.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

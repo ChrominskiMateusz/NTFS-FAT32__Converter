@@ -12,4 +12,5 @@ struct NonResidentHeader
 	uint64_t attributeAllocatedSize;
 	uint64_t attributeRealSize;
 	uint64_t streamDataSize;
+	// File name in Unicode if nameLength != 0x00
 };

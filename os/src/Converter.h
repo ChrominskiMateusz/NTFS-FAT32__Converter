@@ -22,6 +22,6 @@ public:
 
 	static const uint16_t MFT_SIZE_B;
 	static const uint8_t RESERVED_MFT;
-	static const uint8_t END_MARKER;
+	static const uint16_t END_MARKER;
 };
 

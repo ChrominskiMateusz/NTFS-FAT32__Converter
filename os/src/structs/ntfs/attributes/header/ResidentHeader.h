@@ -8,4 +8,5 @@ struct ResidentHeader
 	uint16_t attributeOffset;
 	uint8_t indexedFlag;
 	uint8_t padding;
+	// File name in Unicode if nameLength != 0x00
 };
