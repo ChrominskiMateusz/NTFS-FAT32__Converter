@@ -18,24 +18,15 @@
     <ClCompile Include="src\os.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Fat.cpp">
+    <ClCompile Include="src\Converter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Fat.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\structs\fat32\BiosParameterBlock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\structs\fat32\DirectoryEntry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\structs\fat32\MasterBootRecord.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\structs\fat32\PartitionTableEntry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\structs\ntfs\PartitionBootSector.h">
@@ -51,6 +42,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\structs\ntfs\NonResidentHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\mbr\MasterBootRecord.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\mbr\PartitionTableEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\MFTHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

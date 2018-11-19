@@ -159,17 +159,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\Fat.cpp" />
+    <ClCompile Include="src\Converter.cpp" />
     <ClCompile Include="src\os.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\structs\AllStucts.h" />
     <ClInclude Include="src\structs\fat32\BiosParameterBlock.h" />
     <ClInclude Include="src\structs\fat32\DirectoryEntry.h" />
-    <ClInclude Include="src\Fat.h" />
-    <ClInclude Include="src\structs\fat32\MasterBootRecord.h" />
-    <ClInclude Include="src\structs\fat32\PartitionTableEntry.h" />
+    <ClInclude Include="src\Converter.h" />
+    <ClInclude Include="src\structs\mbr\MasterBootRecord.h" />
+    <ClInclude Include="src\structs\mbr\PartitionTableEntry.h" />
     <ClInclude Include="src\structs\ntfs\CommonHeaderPart.h" />
+    <ClInclude Include="src\structs\ntfs\MFTHeader.h" />
     <ClInclude Include="src\structs\ntfs\NonResidentHeader.h" />
     <ClInclude Include="src\structs\ntfs\PartitionBootSector.h" />
     <ClInclude Include="src\structs\ntfs\ResidentHeader.h" />

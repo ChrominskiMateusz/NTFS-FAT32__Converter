@@ -1,17 +1,17 @@
-#include "Fat.h"
+#include "Converter.h"
 
-Fat::Fat (const std::string& imgName)
+Converter::Converter (const std::string& imgName)
 {
 	discImg.open (imgName, std::ios::binary | std::ios::in | std::ios::app);
 }
 
 
-Fat::~Fat ()
+Converter::~Converter ()
 {
 	discImg.close ();
 }
 
-void Fat::readPartitionBootSector ()
+void Converter::readPartitionBootSector ()
 {
 	discImg.read (reinterpret_cast<char *>(&pbs), sizeof (PartitionBootSector));
 	
@@ -19,10 +19,10 @@ void Fat::readPartitionBootSector ()
 		return;
 }
 
-void Fat::readMFT (const int& VCN)
+void Converter::readMFT (const int& VCN)
 {
-	int32_t offset = pbs.clusterNumberMFT * pbs.bytesPerSector * pbs.sectorsPerCluster;
-	offset += VCN * MFT_SIZE_B;					// system files skip
+	int32_t offset = pbs.clusterNumberMFT * pbs.bytesPerSector * pbs.sectorsPerCluster;			// MFT start
+	offset += VCN * MFT_SIZE_B;
 
 	discImg.seekg (offset, discImg.beg);
 	discImg.read (reinterpret_cast<char *>(&chp), sizeof (CommonHeaderPart));
@@ -31,7 +31,9 @@ void Fat::readMFT (const int& VCN)
 }
 
 
-const uint32_t Fat::MFT_SIZE_B = 1024;
+const uint16_t Converter::MFT_SIZE_B = 0x400;
+const uint8_t Converter::RESERVED_MFT = 0x23;
+const uint8_t Converter::END_MARKER = 0xFF;
 
 
 
@@ -39,17 +41,15 @@ const uint32_t Fat::MFT_SIZE_B = 1024;
 
 
 
-
-
-//void Fat::readBlock (const uint32_t& partitionOffset)
+//void Converter::readBlock (const uint32_t& partitionOffset)
 //{
 //	discImg.seekg (partitionOffset, discImg.beg);
 //	discImg.read (reinterpret_cast<char *>(&bpb), sizeof (BiosParameterBlock));
 //
-//	uint32_t fatStart = partitionOffset + bpb.reservedSectors * 512;
-//	uint32_t fatSize = bpb.tableSize * 512 * bpb.fatCopies;
+//	uint32_t ConverterStart = partitionOffset + bpb.reservedSectors * 512;
+//	uint32_t ConverterSize = bpb.tableSize * 512 * bpb.ConverterCopies;
 //	
-//	uint32_t dataStart = fatStart + fatSize;
+//	uint32_t dataStart = ConverterStart + ConverterSize;
 //	uint32_t rootStart = dataStart + 512 * bpb.sectorsPerCluster * (bpb.rootCluster - 2);
 //
 //	DirectoryEntry dirent[16];

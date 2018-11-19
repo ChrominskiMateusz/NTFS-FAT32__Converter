@@ -6,11 +6,11 @@
 #include <string>
 #include "structs/AllStucts.h"
 
-class Fat
+class Converter
 {
 public:
-	~Fat ();
-	Fat (const std::string& imgName);
+	~Converter ();
+	Converter (const std::string& imgName);
 	void readPartitionBootSector ();
 	void readMFT (const int& VCN);	
 
@@ -19,6 +19,9 @@ public:
 	std::fstream discImg;
 	PartitionBootSector pbs;
 	CommonHeaderPart chp;
-	static const uint32_t MFT_SIZE_B;
+
+	static const uint16_t MFT_SIZE_B;
+	static const uint8_t RESERVED_MFT;
+	static const uint8_t END_MARKER;
 };
 
