@@ -12,9 +12,13 @@ public:
 	~Converter ();
 	Converter (const std::string& imgName);
 	void readPartitionBootSector ();
-	void readMFT (const int& VCN);	
+	void readMFT (const uint32_t& VCN);
+	void getMFTChain ();
+	void moveToMFTChain ();
+	uint64_t getVCNOffset (const uint32_t& VCN);
+	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
 
-
+	uint8_t *MFTChain;
 
 	std::fstream discImg;
 	PartitionBootSector pbs;
