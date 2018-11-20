@@ -18,7 +18,10 @@ public:
 
 	std::fstream discImg;
 	PartitionBootSector pbs;
-	CommonHeaderPart chp;
+	MFTHeader mftHeader;
+	CommonHeaderPart commonHeader;
+	NonResidentHeader nonResidentHeader;
+	ResidentHeader residentHeader;
 
 	static const uint16_t MFT_SIZE_B;
 	static const uint8_t RESERVED_MFT;

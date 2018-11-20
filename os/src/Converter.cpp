@@ -25,9 +25,26 @@ void Converter::readMFT (const int& VCN)
 	offset += VCN * MFT_SIZE_B;
 
 	discImg.seekg (offset, discImg.beg);
-	discImg.read (reinterpret_cast<char *>(&chp), sizeof (CommonHeaderPart));
+	discImg.read (reinterpret_cast<char *>(&mftHeader), sizeof (MFTHeader));
 
+	discImg.seekg (offset + mftHeader.firstAttributeOffset, discImg.beg);
+	do
+	{
+		discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof (CommonHeaderPart));
+		if (commonHeader.residentFlag == 0x01)
+			discImg.read (reinterpret_cast<char *>(&nonResidentHeader), sizeof (NonResidentHeader));
+		else
+			discImg.read (reinterpret_cast<char *>(&residentHeader), sizeof (ResidentHeader));
+		discImg.seekg (commonHeader.nameLength * 2, discImg.cur);
 
+		switch (commonHeader.attributeType)
+		{
+		case Attributes::StandardInformation:
+
+			break;
+		}
+
+	} while (commonHeader.attributeType != END_MARKER);
 }
 
 

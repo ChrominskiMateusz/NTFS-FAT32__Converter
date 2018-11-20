@@ -77,5 +77,8 @@
     <ClInclude Include="src\structs\ntfs\IndexHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\Attributes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

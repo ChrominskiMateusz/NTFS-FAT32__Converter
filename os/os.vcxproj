@@ -169,6 +169,7 @@
     <ClInclude Include="src\Converter.h" />
     <ClInclude Include="src\structs\mbr\MasterBootRecord.h" />
     <ClInclude Include="src\structs\mbr\PartitionTableEntry.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\Attributes.h" />
     <ClInclude Include="src\structs\ntfs\attributes\headers\CommonHeaderPart.h" />
     <ClInclude Include="src\structs\ntfs\attributes\FileName.h" />
     <ClInclude Include="src\structs\ntfs\attributes\headers\IndexNodeHeader.h" />

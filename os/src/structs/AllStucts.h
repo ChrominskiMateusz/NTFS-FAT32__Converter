@@ -13,7 +13,8 @@
 #include "ntfs/IndexEntry.h"
 #include "ntfs/MFTHeader.h"
 
-#include "ntfs/attributes/StandardInformation.h"	// NTFS Attributes
+#include "ntfs/attributes/Attributes.h"				// NTFS Attributes
+#include "ntfs/attributes/StandardInformation.h"
 #include "ntfs/attributes/FileName.h"
 #include "ntfs/attributes/ObjectID.h"
 #include "ntfs/attributes/IndexRoot.h"
