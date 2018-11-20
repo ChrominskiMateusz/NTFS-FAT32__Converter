@@ -5,10 +5,8 @@ Converter::Converter (const std::string& imgName)
 	discImg.open (imgName, std::ios::binary | std::ios::in);
 }
 
-
 Converter::~Converter ()
 {
-	delete MFTChain;
 	discImg.close ();
 }
 
@@ -30,6 +28,7 @@ void Converter::readMFT (const uint32_t& VCN)
 	discImg.seekg (offset + mftHeader.firstAttributeOffset, discImg.beg);
 	do
 	{
+		uint32_t tmpOffset = discImg.tellg ();
 		discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof (CommonHeaderPart));
 		if (commonHeader.residentFlag == 0x01)
 			discImg.read (reinterpret_cast<char *>(&nonResidentHeader), sizeof (NonResidentHeader));
@@ -37,14 +36,107 @@ void Converter::readMFT (const uint32_t& VCN)
 			discImg.read (reinterpret_cast<char *>(&residentHeader), sizeof (ResidentHeader));
 		discImg.seekg (commonHeader.nameLength * 2, discImg.cur);
 
+		uint16_t chainIndex{};
+
 		switch (commonHeader.attributeType)
 		{
 		case Attributes::StandardInformation:
+			discImg.read (reinterpret_cast<char *>(&standardInfo), sizeof StandartInformation);
+			break;
+		case Attributes::FileName:
+			discImg.read (reinterpret_cast<char *>(&fileName), sizeof FileName);
+			break;
+		case Attributes::ObjectID:
+			discImg.read (reinterpret_cast<char *>(&objectID), sizeof ObjectID);
+			break;
+		case Attributes::Data:
 
+			break;
+		case Attributes::IndexRoot:
+			discImg.read (reinterpret_cast<char *>(&indexRoot), sizeof IndexRoot);
+			readIndexRecords ();
+			break;
+		case Attributes::IndexAllocation:
+			uint8_t chain[20];
+			//discImg.read (reinterpret_cast<char *>(chain), 
+			//	(commonHeader.length - discImg.tellg ()) > 20 ? 20 : commonHeader.length - discImg.tellg ());
+			discImg.read (reinterpret_cast<char *>(chain), 8);
+			while (chain[chainIndex] != 0x00)
+			{
+				std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
+				discImg.seekg (tmp.second * 4096);
+				readINDX ();
+			}
+			break;
+		case Attributes::BitMap:			// not needed in school project, U can add it if U'd like to
+			break;
+		default:
 			break;
 		}
 
+		discImg.seekg (tmpOffset + commonHeader.length);
 	} while (commonHeader.attributeType != END_MARKER);
+}
+
+uint64_t Converter::getVCNOffset (const uint32_t& VCN)
+{
+	uint32_t bytesPerCluster = pbs.bytesPerSector * pbs.sectorsPerCluster;
+	uint16_t chainIndex{};
+	uint32_t rangeVCN{};
+	std::pair<uint64_t, uint64_t> sizeAndOffset;
+
+	while (VCN > rangeVCN)
+	{
+		sizeAndOffset = decodeChain (MFTChain, chainIndex);
+		rangeVCN += sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
+	}
+
+	rangeVCN -= sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
+	return sizeAndOffset.second * bytesPerCluster + (VCN - rangeVCN) * MFT_SIZE_B;
+}
+
+std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& chainIndex)
+{
+	uint8_t sizeLength;
+	uint8_t offsetLength;
+	std::pair<uint64_t, uint64_t> sizeAndOffset{};
+
+	sizeLength = chain[chainIndex] & 0x0F;
+	offsetLength = (chain[chainIndex] >> 4) & 0x0F;
+
+	chainIndex++;
+	for (int i{}; i < sizeLength; i++)
+		sizeAndOffset.first |= (chain[chainIndex + i] << (i * 8));
+	
+	chainIndex += sizeLength;
+	for (int i{}; i < offsetLength; i++)
+		sizeAndOffset.second |= (chain[chainIndex + i] << (i * 8));
+
+	chainIndex += offsetLength;
+	return sizeAndOffset;
+}
+
+void Converter::readBigData ()
+{
+}
+
+void Converter::readINDX ()
+{
+	discImg.read (reinterpret_cast<char *>(&indexHeader), sizeof IndexHeader);
+	discImg.seekg (indexHeader.entriesOffset - 0x12, discImg.cur);
+	readIndexRecords ();
+}
+
+void Converter::readIndexRecords ()
+{
+	discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
+
+	while (indexEntry.recordNumber != 0x0000)
+	{
+		discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
+		std::cout << indexEntry.recordNumber << std::endl;
+		discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
+	}
 }
 
 void Converter::getMFTChain ()
@@ -86,45 +178,6 @@ void Converter::moveToMFTChain ()
 	discImg.seekg (startOffset, discImg.beg);					// read 0x80 header
 	discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof CommonHeaderPart);
 }
-
-uint64_t Converter::getVCNOffset (const uint32_t& VCN)
-{
-	uint32_t bytesPerCluster = pbs.bytesPerSector * pbs.sectorsPerCluster;
-	uint16_t chainIndex{};
-	uint32_t rangeVCN{};
-	std::pair<uint64_t, uint64_t> sizeAndOffset;
-
-	while (VCN > rangeVCN)
-	{
-		sizeAndOffset = decodeChain (MFTChain, chainIndex);
-		rangeVCN += sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
-	}
-
-	rangeVCN -= sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
-	return sizeAndOffset.second * bytesPerCluster + (VCN - rangeVCN) * MFT_SIZE_B;
-}
-
-std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& chainIndex)
-{
-	uint8_t sizeLength;
-	uint8_t offsetLength;
-	std::pair<uint64_t, uint64_t> sizeAndOffset{};
-
-	sizeLength = chain[chainIndex] & 0x0F;
-	offsetLength = (chain[chainIndex] >> 4) & 0x0F;
-
-	chainIndex++;
-	for (int i{}; i < sizeLength; i++)
-		sizeAndOffset.first |= (chain[chainIndex + i] << (i * 8));
-	
-	chainIndex += sizeLength;
-	for (int i{}; i < offsetLength; i++)
-		sizeAndOffset.second |= (chain[chainIndex + i] << (i * 8));
-
-	chainIndex += offsetLength;
-	return sizeAndOffset;
-}
-
 
 const uint16_t Converter::MFT_SIZE_B = 0x400;
 const uint8_t Converter::RESERVED_MFT = 0x23;
