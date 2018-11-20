@@ -2,7 +2,7 @@
 
 Converter::Converter (const std::string& imgName)
 {
-	discImg.open (imgName, std::ios::binary | std::ios::in | std::ios::app);
+	discImg.open (imgName, std::ios::binary | std::ios::in);
 }
 
 
@@ -61,22 +61,20 @@ void Converter::getMFTChain ()
 		attributeSize += 2 * commonHeader.nameLength;
 
 	uint8_t sequenceSize = commonHeader.length - (attributeSize + sizeof (CommonHeaderPart));
-	MFTChain = new uint8_t[sequenceSize];
 
 	discImg.seekg (attributeSize, discImg.cur);
-	discImg.read (reinterpret_cast<char *>(&MFTChain), sizeof MFTChain);
+	discImg.read (reinterpret_cast<char *>(MFTChain), sequenceSize);
 }
 
 void Converter::moveToMFTChain ()
 {
 	uint32_t startOffset = pbs.clusterNumberMFT * pbs.bytesPerSector * pbs.sectorsPerCluster;
-	uint8_t firstAttribute;
 	uint32_t attributeSize;
 
-	discImg.seekg (startOffset + 0x14, discImg.beg);			// read 0x10 attribute offset
-	discImg.read (reinterpret_cast<char *>(&firstAttribute), sizeof uint8_t);
+	discImg.seekg (startOffset, discImg.beg);			// read 0x10 attribute offset
+	discImg.read (reinterpret_cast<char *>(&mftHeader), sizeof MFTHeader);
 
-	startOffset += firstAttribute;
+	startOffset += mftHeader.firstAttributeOffset;
 	discImg.seekg (startOffset + 0x04, discImg.beg);			// read 0x30 attribute offset
 	discImg.read (reinterpret_cast<char *>(&attributeSize), sizeof uint32_t);
 
@@ -103,7 +101,7 @@ uint64_t Converter::getVCNOffset (const uint32_t& VCN)
 	}
 
 	rangeVCN -= sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
-	return sizeAndOffset.second + (VCN - rangeVCN) * MFT_SIZE_B;
+	return sizeAndOffset.second * bytesPerCluster + (VCN - rangeVCN) * MFT_SIZE_B;
 }
 
 std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& chainIndex)

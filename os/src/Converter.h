@@ -18,7 +18,7 @@ public:
 	uint64_t getVCNOffset (const uint32_t& VCN);
 	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
 
-	uint8_t *MFTChain;
+	uint8_t MFTChain[20];
 
 	std::fstream discImg;
 	PartitionBootSector pbs;
