@@ -169,13 +169,17 @@
     <ClInclude Include="src\Converter.h" />
     <ClInclude Include="src\structs\mbr\MasterBootRecord.h" />
     <ClInclude Include="src\structs\mbr\PartitionTableEntry.h" />
-    <ClInclude Include="src\structs\ntfs\attributes\header\CommonHeaderPart.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\headers\CommonHeaderPart.h" />
     <ClInclude Include="src\structs\ntfs\attributes\FileName.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\headers\IndexNodeHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\IndexRoot.h" />
     <ClInclude Include="src\structs\ntfs\attributes\ObjectID.h" />
+    <ClInclude Include="src\structs\ntfs\IndexEntry.h" />
+    <ClInclude Include="src\structs\ntfs\IndexHeader.h" />
     <ClInclude Include="src\structs\ntfs\MFTHeader.h" />
-    <ClInclude Include="src\structs\ntfs\attributes\header\NonResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\headers\NonResidentHeader.h" />
     <ClInclude Include="src\structs\ntfs\PartitionBootSector.h" />
-    <ClInclude Include="src\structs\ntfs\attributes\header\ResidentHeader.h" />
+    <ClInclude Include="src\structs\ntfs\attributes\headers\ResidentHeader.h" />
     <ClInclude Include="src\structs\ntfs\attributes\StandardInformation.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

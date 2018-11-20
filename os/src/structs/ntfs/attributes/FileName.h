@@ -17,5 +17,5 @@ struct FileName		// 0x30
 	uint32_t EAandReparse;
 	uint8_t filenameLength;		// in characters
 	uint8_t filenameNamespace;
-	// File name in Unicode
+	// name ...
 };

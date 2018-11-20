@@ -4,9 +4,9 @@
 
 struct MFTHeader
 {
-	uint8_t magicNumber[4];
+	uint8_t magicNumber[4];					// FILE
 	uint16_t sequenceOffset;
-	uint16_t sequenceSize;
+	uint16_t sequenceSize;					// in words
 	uint64_t logFileSequenceNumber;
 	uint16_t sequenceNumber;
 	uint16_t hardLinkCount;

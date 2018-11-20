@@ -53,16 +53,28 @@
     <ClInclude Include="src\structs\ntfs\attributes\FileName.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\structs\ntfs\attributes\header\CommonHeaderPart.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\structs\ntfs\attributes\header\NonResidentHeader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\structs\ntfs\attributes\header\ResidentHeader.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\structs\ntfs\attributes\ObjectID.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\IndexRoot.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\headers\CommonHeaderPart.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\headers\IndexNodeHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\headers\NonResidentHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\attributes\headers\ResidentHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\IndexEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\structs\ntfs\IndexHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
