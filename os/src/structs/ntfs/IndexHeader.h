@@ -10,7 +10,7 @@ struct IndexHeader
 	uint64_t logFileSequenceNumber;
 	uint64_t thisVCN;				// VCN of this INDX buffer in the Index Allocation
 	uint32_t entriesOffset;			// from 0x18
-	uint32_t entriesSize;			// from 0x18
+	int32_t entriesSize;			// from 0x18
 	uint32_t allocatedEntriesSize;	// from 0x18
 	uint8_t notLeafFlag;			// 1 if has children
 	uint8_t allign[3];

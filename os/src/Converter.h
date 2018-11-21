@@ -19,7 +19,7 @@ public:
 	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
 	void readBigData ();
 	void readINDX ();
-	void readIndexRecords ();
+	void readIndexRecord ();
 
 	uint8_t MFTChain[20];
 

@@ -29,13 +29,14 @@ void Converter::readMFT (const uint32_t& VCN)
 	do
 	{
 		uint32_t tmpOffset = discImg.tellg ();
-		discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof (CommonHeaderPart));
+		discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof CommonHeaderPart);
 		if (commonHeader.residentFlag == 0x01)
-			discImg.read (reinterpret_cast<char *>(&nonResidentHeader), sizeof (NonResidentHeader));
+			discImg.read (reinterpret_cast<char *>(&nonResidentHeader), sizeof NonResidentHeader);
 		else
-			discImg.read (reinterpret_cast<char *>(&residentHeader), sizeof (ResidentHeader));
+			discImg.read (reinterpret_cast<char *>(&residentHeader), sizeof ResidentHeader);
 		discImg.seekg (commonHeader.nameLength * 2, discImg.cur);
 
+		int32_t dataLength = commonHeader.length - (static_cast<uint32_t>(discImg.tellg ()) - tmpOffset);
 		uint16_t chainIndex{};
 
 		switch (commonHeader.attributeType)
@@ -54,12 +55,15 @@ void Converter::readMFT (const uint32_t& VCN)
 			break;
 		case Attributes::IndexRoot:
 			discImg.read (reinterpret_cast<char *>(&indexRoot), sizeof IndexRoot);
-			readIndexRecords ();
+			dataLength -= sizeof IndexRoot;
+			while (dataLength > 0)
+			{
+				readIndexRecord ();
+				dataLength -= indexEntry.entryLength;
+			}
 			break;
 		case Attributes::IndexAllocation:
 			uint8_t chain[20];
-			//discImg.read (reinterpret_cast<char *>(chain), 
-			//	(commonHeader.length - discImg.tellg ()) > 20 ? 20 : commonHeader.length - discImg.tellg ());
 			discImg.read (reinterpret_cast<char *>(chain), 8);
 			while (chain[chainIndex] != 0x00)
 			{
@@ -118,25 +122,41 @@ std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& 
 
 void Converter::readBigData ()
 {
+
 }
 
 void Converter::readINDX ()
 {
 	discImg.read (reinterpret_cast<char *>(&indexHeader), sizeof IndexHeader);
 	discImg.seekg (indexHeader.entriesOffset - 0x12, discImg.cur);
-	readIndexRecords ();
+	indexHeader.entriesSize -= indexHeader.entriesOffset;
+
+	while (indexHeader.entriesSize > 0)
+	{
+		readIndexRecord ();
+		indexHeader.entriesSize -= indexEntry.entryLength;
+	}
 }
 
-void Converter::readIndexRecords ()
+void Converter::readIndexRecord ()
 {
 	discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
-
-	while (indexEntry.recordNumber != 0x0000)
+	std::cout << "BEFORE: " << discImg.tellg () << std::endl;
+	if (indexEntry.recordNumber == 69)
 	{
-		discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
-		std::cout << indexEntry.recordNumber << std::endl;
-		discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
+		
+		
+		
+		
+		discImg.seekg (16, discImg.cur);
+		uint8_t tmp;
+		discImg.read (reinterpret_cast<char *>(&tmp), sizeof uint8_t);
+		discImg.seekg (71, discImg.cur);
 	}
+	else
+		discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
+	std::cout << "AFTER: " << discImg.tellg () << std::endl;
+	std::cout << indexEntry.recordNumber << std::endl;
 }
 
 void Converter::getMFTChain ()
