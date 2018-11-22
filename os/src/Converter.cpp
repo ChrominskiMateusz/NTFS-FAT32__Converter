@@ -51,7 +51,7 @@ void Converter::readMFT (const uint32_t& VCN)
 			discImg.read (reinterpret_cast<char *>(&objectID), sizeof ObjectID);
 			break;
 		case Attributes::Data:
-
+			readData (dataLength, chainIndex);
 			break;
 		case Attributes::IndexRoot:
 			discImg.read (reinterpret_cast<char *>(&indexRoot), sizeof IndexRoot);
@@ -120,9 +120,27 @@ std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& 
 	return sizeAndOffset;
 }
 
-void Converter::readBigData ()
+void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex)
 {
-
+	uint8_t *p;
+	if (!commonHeader.residentFlag)
+	{
+		p = new uint8_t[residentHeader.attributeLength + 1];
+		discImg.read (reinterpret_cast<char *>(p), residentHeader.attributeLength);
+		p[residentHeader.attributeLength] = '\0';
+		std::cout << p;
+	}
+	else
+	{
+		p = new uint8_t[dataLength];
+		discImg.read (reinterpret_cast<char *>(p), dataLength);
+		while (p[chainIndex] != 0x00)
+		{
+			std::pair<uint64_t, uint64_t> tmp = decodeChain (p, chainIndex);
+			discImg.seekg (tmp.second * 4096);
+			readNonResidentData (tmp.first);
+		}
+	}
 }
 
 void Converter::readINDX ()
@@ -135,6 +153,18 @@ void Converter::readINDX ()
 	{
 		readIndexRecord ();
 		indexHeader.entriesSize -= indexEntry.entryLength;
+	}
+}
+
+void Converter::readNonResidentData (uint64_t& clustersAmount)
+{
+	uint16_t clusterSize = pbs.bytesPerSector * pbs.sectorsPerCluster;
+	uint8_t *t = new uint8_t[clusterSize + 1];
+	while (clustersAmount-- > 0)
+	{
+		discImg.read (reinterpret_cast<char *>(t), clusterSize);
+		t[clusterSize] = '\0';
+		std::cout << t;
 	}
 }
 

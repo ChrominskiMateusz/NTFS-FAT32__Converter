@@ -17,8 +17,9 @@ public:
 	void moveToMFTChain ();
 	uint64_t getVCNOffset (const uint32_t& VCN);
 	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
-	void readBigData ();
+	void readData (const uint32_t& dataLength, uint16_t& chainIndex);
 	void readINDX ();
+	void readNonResidentData (uint64_t& clustersAmount);
 	void readIndexRecord ();
 
 	uint8_t MFTChain[20];
