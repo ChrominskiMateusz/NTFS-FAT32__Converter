@@ -141,22 +141,9 @@ void Converter::readINDX ()
 void Converter::readIndexRecord ()
 {
 	discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
-	std::cout << "BEFORE: " << discImg.tellg () << std::endl;
-	if (indexEntry.recordNumber == 69)
-	{
-		
-		
-		
-		
-		discImg.seekg (16, discImg.cur);
-		uint8_t tmp;
-		discImg.read (reinterpret_cast<char *>(&tmp), sizeof uint8_t);
-		discImg.seekg (71, discImg.cur);
-	}
-	else
-		discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
-	std::cout << "AFTER: " << discImg.tellg () << std::endl;
-	std::cout << indexEntry.recordNumber << std::endl;
+	discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
+	if(indexEntry.recordNumber != 0x0000)
+		std::cout << indexEntry.recordNumber << std::endl;
 }
 
 void Converter::getMFTChain ()
@@ -201,7 +188,7 @@ void Converter::moveToMFTChain ()
 
 const uint16_t Converter::MFT_SIZE_B = 0x400;
 const uint8_t Converter::RESERVED_MFT = 0x23;
-const uint16_t Converter::END_MARKER = 0xFFFF;
+const uint32_t Converter::END_MARKER = 0xFFFFFFFF;
 
 
 
