@@ -12,79 +12,88 @@ Converter::~Converter ()
 
 void Converter::readPartitionBootSector ()
 {
-	discImg.read (reinterpret_cast<char *>(&pbs), sizeof (PartitionBootSector));
+	discImg.read (reinterpret_cast<char *>(&bootSector), sizeof (PartitionBootSector));
 	
-	if (pbs.magicNumber != 0xAA55)
+	if (bootSector.magicNumber != 0xAA55)
 		return;
 }
 
 void Converter::readMFT (const uint32_t& VCN)
 {
+	MFTHeader mftH;
+	CommonHeaderPart comH;
+	NonResidentHeader nResH;
+	ResidentHeader resH;
+	StandartInformation sInf;
+	FileName fName;
+	ObjectID oID;
+	IndexRoot iRoot;
+
 	uint32_t offset = getVCNOffset (VCN);
 
 	discImg.seekg (offset, discImg.beg);
-	discImg.read (reinterpret_cast<char *>(&mftHeader), sizeof (MFTHeader));
+	discImg.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
+	discImg.seekg (offset + mftH.firstAttributeOffset, discImg.beg);
 
-	discImg.seekg (offset + mftHeader.firstAttributeOffset, discImg.beg);
-	do
+	while (true)
 	{
 		uint32_t tmpOffset = discImg.tellg ();
-		discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof CommonHeaderPart);
-		if (commonHeader.residentFlag == 0x01)
-			discImg.read (reinterpret_cast<char *>(&nonResidentHeader), sizeof NonResidentHeader);
+		discImg.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
+		if (comH.attributeType == END_MARKER)
+			break;
+		if (comH.residentFlag == 0x01)
+			discImg.read (reinterpret_cast<char *>(&nResH), sizeof NonResidentHeader);
 		else
-			discImg.read (reinterpret_cast<char *>(&residentHeader), sizeof ResidentHeader);
-		discImg.seekg (commonHeader.nameLength * 2, discImg.cur);
+			discImg.read (reinterpret_cast<char *>(&resH), sizeof ResidentHeader);
+		discImg.seekg (comH.nameLength * 2, discImg.cur);
 
-		int32_t dataLength = commonHeader.length - (static_cast<uint32_t>(discImg.tellg ()) - tmpOffset);
+		int32_t dataLength = comH.length - (static_cast<uint32_t>(discImg.tellg ()) - tmpOffset);
 		uint16_t chainIndex{};
 
-		switch (commonHeader.attributeType)
+		switch (comH.attributeType)
 		{
 		case Attributes::StandardInformation:
-			discImg.read (reinterpret_cast<char *>(&standardInfo), sizeof StandartInformation);
+			discImg.read (reinterpret_cast<char *>(&sInf), sizeof StandartInformation);
 			break;
 		case Attributes::FileName:
-			discImg.read (reinterpret_cast<char *>(&fileName), sizeof FileName);
+			discImg.read (reinterpret_cast<char *>(&fName), sizeof FileName);
 			break;
 		case Attributes::ObjectID:
-			discImg.read (reinterpret_cast<char *>(&objectID), sizeof ObjectID);
+			discImg.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);
 			break;
 		case Attributes::Data:
-			readData (dataLength, chainIndex);
+			readData (dataLength, chainIndex, comH, resH);
 			break;
 		case Attributes::IndexRoot:
-			discImg.read (reinterpret_cast<char *>(&indexRoot), sizeof IndexRoot);
+			discImg.read (reinterpret_cast<char *>(&iRoot), sizeof IndexRoot);
 			dataLength -= sizeof IndexRoot;
 			while (dataLength > 0)
 			{
-				readIndexRecord ();
-				dataLength -= indexEntry.entryLength;
+				uint64_t k = 0;
+				readIndexRecord (dataLength, k);
 			}
 			break;
 		case Attributes::IndexAllocation:
-			uint8_t chain[20];
-			discImg.read (reinterpret_cast<char *>(chain), 8);
+			uint8_t *chain = new uint8_t[dataLength + 1];
+			chain[dataLength] = 0x00;
+			discImg.read (reinterpret_cast<char *>(chain), dataLength);
 			while (chain[chainIndex] != 0x00)
 			{
 				std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
 				discImg.seekg (tmp.second * 4096);
 				readINDX ();
 			}
-			break;
-		case Attributes::BitMap:			// not needed in school project, U can add it if U'd like to
-			break;
-		default:
+			delete chain;
 			break;
 		}
 
-		discImg.seekg (tmpOffset + commonHeader.length);
-	} while (commonHeader.attributeType != END_MARKER);
+		discImg.seekg (tmpOffset + comH.length);
+	}
 }
 
 uint64_t Converter::getVCNOffset (const uint32_t& VCN)
 {
-	uint32_t bytesPerCluster = pbs.bytesPerSector * pbs.sectorsPerCluster;
+	uint32_t bytesPerCluster = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 	uint16_t chainIndex{};
 	uint32_t rangeVCN{};
 	std::pair<uint64_t, uint64_t> sizeAndOffset;
@@ -120,14 +129,14 @@ std::pair<uint64_t, uint64_t> Converter::decodeChain (uint8_t* chain, uint16_t& 
 	return sizeAndOffset;
 }
 
-void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex)
+void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart& comH, const ResidentHeader& resH)
 {
 	uint8_t *p;
-	if (!commonHeader.residentFlag)
+	if (!comH.residentFlag)
 	{
-		p = new uint8_t[residentHeader.attributeLength + 1];
-		discImg.read (reinterpret_cast<char *>(p), residentHeader.attributeLength);
-		p[residentHeader.attributeLength] = '\0';
+		p = new uint8_t[resH.attributeLength + 1];
+		discImg.read (reinterpret_cast<char *>(p), resH.attributeLength);
+		p[resH.attributeLength] = '\0';
 		std::cout << p;
 	}
 	else
@@ -141,69 +150,88 @@ void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex)
 			readNonResidentData (tmp.first);
 		}
 	}
+	delete p;
 }
 
 void Converter::readINDX ()
 {
-	discImg.read (reinterpret_cast<char *>(&indexHeader), sizeof IndexHeader);
-	discImg.seekg (indexHeader.entriesOffset - 0x12, discImg.cur);
-	indexHeader.entriesSize -= indexHeader.entriesOffset;
-
-	while (indexHeader.entriesSize > 0)
+	IndexHeader iHead;
+	discImg.read (reinterpret_cast<char *>(&iHead), sizeof IndexHeader);
+	discImg.seekg (iHead.entriesOffset - 0x12, discImg.cur);
+	iHead.entriesSize -= iHead.entriesOffset;
+	int32_t size = iHead.entriesSize;
+	while (size > 0)
 	{
-		readIndexRecord ();
-		indexHeader.entriesSize -= indexEntry.entryLength;
+		uint64_t tmp = discImg.tellg ();
+		readIndexRecord (size, tmp);
+		discImg.seekg (tmp);
 	}
 }
 
 void Converter::readNonResidentData (uint64_t& clustersAmount)
 {
-	uint16_t clusterSize = pbs.bytesPerSector * pbs.sectorsPerCluster;
+	uint16_t clusterSize = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 	uint8_t *t = new uint8_t[clusterSize + 1];
 	while (clustersAmount-- > 0)
 	{
 		discImg.read (reinterpret_cast<char *>(t), clusterSize);
 		t[clusterSize] = '\0';
-		std::cout << t;
+		std::cout << "Big file right here" << std::endl;
 	}
+	delete t;
 }
 
-void Converter::readIndexRecord ()
+void Converter::readIndexRecord (int32_t& size, uint64_t& lastOffset)
 {
-	discImg.read (reinterpret_cast<char *>(&indexEntry), sizeof IndexEntry);
-	discImg.seekg (indexEntry.entryLength - sizeof (IndexEntry), discImg.cur);
-	if(indexEntry.recordNumber != 0x0000)
-		std::cout << indexEntry.recordNumber << std::endl;
+	IndexEntry iEntry;
+	int tP = static_cast<uint64_t>(discImg.tellg ());
+	discImg.read (reinterpret_cast<char *>(&iEntry), sizeof IndexEntry);
+	tP += iEntry.entryLength;
+	lastOffset += iEntry.entryLength;
+	size -= iEntry.entryLength;
+	discImg.seekg (iEntry.entryLength - sizeof IndexEntry, discImg.cur);
+	if (iEntry.recordNumber > 0x23)
+	{
+		std::cout << iEntry.recordNumber << std::endl;
+		if (iEntry.recordNumber == 62)
+		{
+			std::cout << "";
+		}
+		readMFT (iEntry.recordNumber);
+	}
+	discImg.seekg (tP);
 }
 
 void Converter::getMFTChain ()
 {
-	moveToMFTChain ();
+	CommonHeaderPart comH;
+	moveToMFTChain (comH);
 	uint32_t attributeSize = 0;
 	
-	if (commonHeader.residentFlag == 0x01)
+	if (comH.residentFlag == 0x01)
 		attributeSize += 0x30;
 	else
 		attributeSize += 0x08;
 
-	if (commonHeader.nameLength != 0x00)
-		attributeSize += 2 * commonHeader.nameLength;
+	if (comH.nameLength != 0x00)
+		attributeSize += 2 * comH.nameLength;
 
-	uint8_t sequenceSize = commonHeader.length - (attributeSize + sizeof (CommonHeaderPart));
+	uint8_t sequenceSize = comH.length - (attributeSize + sizeof CommonHeaderPart);
 
 	discImg.seekg (attributeSize, discImg.cur);
 	discImg.read (reinterpret_cast<char *>(MFTChain), sequenceSize);
 }
 
-void Converter::moveToMFTChain ()
+void Converter::moveToMFTChain (CommonHeaderPart& comH)
 {
-	uint32_t startOffset = pbs.clusterNumberMFT * pbs.bytesPerSector * pbs.sectorsPerCluster;
+	MFTHeader mftH;
+	uint32_t startOffset = bootSector.clusterNumberMFT * bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 	uint32_t attributeSize;
 
 	discImg.seekg (startOffset, discImg.beg);			// read 0x10 attribute offset
-	discImg.read (reinterpret_cast<char *>(&mftHeader), sizeof MFTHeader);
+	discImg.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
 
-	startOffset += mftHeader.firstAttributeOffset;
+	startOffset += mftH.firstAttributeOffset;
 	discImg.seekg (startOffset + 0x04, discImg.beg);			// read 0x30 attribute offset
 	discImg.read (reinterpret_cast<char *>(&attributeSize), sizeof uint32_t);
 
@@ -213,7 +241,7 @@ void Converter::moveToMFTChain ()
 
 	startOffset += attributeSize;
 	discImg.seekg (startOffset, discImg.beg);					// read 0x80 header
-	discImg.read (reinterpret_cast<char *>(&commonHeader), sizeof CommonHeaderPart);
+	discImg.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
 }
 
 const uint16_t Converter::MFT_SIZE_B = 0x400;
