@@ -20,7 +20,7 @@ struct PartitionBootSector
 	uint32_t notUsed_0x20;
 
 	uint32_t notUsed_0x24;		// Extended BPB
-	uint64_t totalSectors;
+	uint64_t totalSectors;		// this * bytesPerSector == partiotionSize
 	uint64_t clusterNumberMFT;
 	uint64_t clusterNumberMFTMirr;
 	uint32_t clustersPerFileRecordSegment;
@@ -30,5 +30,5 @@ struct PartitionBootSector
 	uint32_t checksum;
 
 	uint8_t bootstrapCode[426];
-	uint16_t magicNumber;
+	uint16_t magicNumber;		// 0xAA55
 };
