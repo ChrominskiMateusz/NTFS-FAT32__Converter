@@ -7,18 +7,18 @@ Converter::Converter (const std::string& imgName)
 
 Converter::~Converter ()
 {
+	delete MFTChain;
 	discImg.close ();
 }
 
 void Converter::readPartitionBootSector ()
 {
 	discImg.read (reinterpret_cast<char *>(&bootSector), sizeof (PartitionBootSector));
-	
 	if (bootSector.magicNumber != 0xAA55)
 		return;
 }
 
-void Converter::readMFT (const uint32_t& VCN)
+void Converter::readMFT (const uint32_t& VCN, const uint32_t& dLvl)
 {
 	MFTHeader mftH;
 	CommonHeaderPart comH;
@@ -57,6 +57,7 @@ void Converter::readMFT (const uint32_t& VCN)
 			break;
 		case Attributes::FileName:
 			discImg.read (reinterpret_cast<char *>(&fName), sizeof FileName);
+			printName (fName, dLvl);
 			break;
 		case Attributes::ObjectID:
 			discImg.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);
@@ -70,7 +71,7 @@ void Converter::readMFT (const uint32_t& VCN)
 			while (dataLength > 0)
 			{
 				uint64_t k = 0;
-				readIndexRecord (dataLength, k);
+				readIndexRecord (dataLength, k, dLvl);
 			}
 			break;
 		case Attributes::IndexAllocation:
@@ -81,7 +82,7 @@ void Converter::readMFT (const uint32_t& VCN)
 			{
 				std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
 				discImg.seekg (tmp.second * 4096);
-				readINDX ();
+				readINDX (dLvl);
 			}
 			delete chain;
 			break;
@@ -137,7 +138,7 @@ void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex, cons
 		p = new uint8_t[resH.attributeLength + 1];
 		discImg.read (reinterpret_cast<char *>(p), resH.attributeLength);
 		p[resH.attributeLength] = '\0';
-		std::cout << p;
+		//std::cout << p;
 	}
 	else
 	{
@@ -153,7 +154,7 @@ void Converter::readData (const uint32_t& dataLength, uint16_t& chainIndex, cons
 	delete p;
 }
 
-void Converter::readINDX ()
+void Converter::readINDX (const uint32_t& dLvl)
 {
 	IndexHeader iHead;
 	discImg.read (reinterpret_cast<char *>(&iHead), sizeof IndexHeader);
@@ -163,7 +164,7 @@ void Converter::readINDX ()
 	while (size > 0)
 	{
 		uint64_t tmp = discImg.tellg ();
-		readIndexRecord (size, tmp);
+		readIndexRecord (size, tmp, dLvl);
 		discImg.seekg (tmp);
 	}
 }
@@ -176,12 +177,12 @@ void Converter::readNonResidentData (uint64_t& clustersAmount)
 	{
 		discImg.read (reinterpret_cast<char *>(t), clusterSize);
 		t[clusterSize] = '\0';
-		std::cout << "Big file right here" << std::endl;
+		//std::cout << "Big file right here" << std::endl;
 	}
 	delete t;
 }
 
-void Converter::readIndexRecord (int32_t& size, uint64_t& lastOffset)
+void Converter::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl)
 {
 	IndexEntry iEntry;
 	int tP = static_cast<uint64_t>(discImg.tellg ());
@@ -192,14 +193,27 @@ void Converter::readIndexRecord (int32_t& size, uint64_t& lastOffset)
 	discImg.seekg (iEntry.entryLength - sizeof IndexEntry, discImg.cur);
 	if (iEntry.recordNumber > 0x23)
 	{
-		std::cout << iEntry.recordNumber << std::endl;
-		if (iEntry.recordNumber == 62)
-		{
-			std::cout << "";
-		}
-		readMFT (iEntry.recordNumber);
+		//std::cout << iEntry.recordNumber << std::endl;
+		readMFT (iEntry.recordNumber, dLvl + 1);
 	}
 	discImg.seekg (tP);
+}
+
+void Converter::printName (const FileName& fName, const uint32_t& dLvl)
+{
+	uint8_t *n = new uint8_t[fName.filenameLength * 2 + 1];
+	uint8_t *fn = new uint8_t[fName.filenameLength + 1];
+	discImg.read (reinterpret_cast<char *>(n), fName.filenameLength * 2);
+	for (int i = 0, j = 0; i < fName.filenameLength * 2; i += 2, j++)
+		fn[j] = n[i];
+	fn[fName.filenameLength] = '\0';
+	for (int i{}; i < dLvl; i++)
+		std::cout << "-";
+	if (fName.flags == 0x10000000)
+		std::cout << "Dir:  ";
+	std::cout << fn << std::endl;
+	delete n;
+	delete fn;
 }
 
 void Converter::getMFTChain ()
@@ -217,9 +231,10 @@ void Converter::getMFTChain ()
 		attributeSize += 2 * comH.nameLength;
 
 	uint8_t sequenceSize = comH.length - (attributeSize + sizeof CommonHeaderPart);
-
+	MFTChain = new uint8_t[sequenceSize + 1];
 	discImg.seekg (attributeSize, discImg.cur);
 	discImg.read (reinterpret_cast<char *>(MFTChain), sequenceSize);
+	MFTChain[sequenceSize] = 0x00;
 }
 
 void Converter::moveToMFTChain (CommonHeaderPart& comH)
