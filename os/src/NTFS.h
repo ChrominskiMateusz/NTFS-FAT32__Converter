@@ -24,7 +24,6 @@ public:
 	void readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl);
 	void readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart&, const ResidentHeader&);
 	
-
 	uint8_t *MFTChain;
 	std::fstream partition;
 	PartitionBootSector bootSector;

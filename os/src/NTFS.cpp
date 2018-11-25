@@ -192,10 +192,7 @@ void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t&
 	size -= iEntry.entryLength;
 	partition.seekg (iEntry.entryLength - sizeof IndexEntry, partition.cur);
 	if (iEntry.recordNumber > 0x23)
-	{
-		//std::cout << iEntry.recordNumber << std::endl;
 		readMFT (iEntry.recordNumber, dLvl + 1);
-	}
 	partition.seekg (tP);
 }
 
