@@ -22,7 +22,7 @@ void Converter::readBlock ()
 {
 	BiosParameterBlock bpb;
 	std::fstream discImg;
-	discImg.open ("fatFULL.img", std::ios::binary || std::ios::in);
+	discImg.open ("\\\\.\\F:", std::ios::binary || std::ios::in);
 	discImg.read (reinterpret_cast<char *>(&bpb), sizeof (BiosParameterBlock));
 
 	uint32_t fatStart = bpb.reservedSectors * 512;
