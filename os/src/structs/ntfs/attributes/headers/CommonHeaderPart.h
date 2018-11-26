@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct CommonHeaderPart
@@ -12,3 +12,5 @@ struct CommonHeaderPart
 	uint16_t flags;
 	uint16_t attributeID;
 };
+
+#pragma pack(pop)

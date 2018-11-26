@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct DirectoryEntry
@@ -18,3 +18,5 @@ struct DirectoryEntry
 	uint16_t firstClusterLow;
 	uint32_t size;
 };
+
+#pragma pack(pop)

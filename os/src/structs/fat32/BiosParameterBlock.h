@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct BiosParameterBlock
@@ -34,3 +34,5 @@ struct BiosParameterBlock
 	uint8_t volumeLabel[11];
 	uint8_t fatTypeLabel[8];
 };
+
+#pragma pack(pop)

@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct IndexEntry
@@ -12,3 +12,5 @@ struct IndexEntry
 	uint16_t flags;
 	uint16_t align;
 };
+
+#pragma pack(pop)

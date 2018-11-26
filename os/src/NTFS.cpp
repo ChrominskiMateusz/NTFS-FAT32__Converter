@@ -1,4 +1,6 @@
 #include "NTFS.h"
+#include <Windows.h>
+#include <stdio.h>
 
 NTFS::NTFS (const std::string& partitionName)
 {
@@ -56,8 +58,18 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& dLvl)
 			partition.read (reinterpret_cast<char *>(&sInf), sizeof StandartInformation);
 			break;
 		case Attributes::FileName:
+		{
 			partition.read (reinterpret_cast<char *>(&fName), sizeof FileName);
 			printName (fName, dLvl);
+			
+			FILETIME ftCreate;
+			SYSTEMTIME stUTC;
+			ftCreate.dwLowDateTime = DWORD(fName.creationTime & 0x00000000FFFFFFFF);
+			ftCreate.dwHighDateTime = DWORD ((fName.creationTime & 0xFFFFFFFF00000000) >> 32);
+			FileTimeToSystemTime (&ftCreate, &stUTC);
+			printf ("Created on: %02d/%02d/%d %02d:%02d\n", stUTC.wDay, stUTC.wMonth, stUTC.wYear, stUTC.wHour, stUTC.wMinute);
+
+		}
 			break;
 		case Attributes::ObjectID:
 			partition.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);

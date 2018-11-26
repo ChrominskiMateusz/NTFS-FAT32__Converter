@@ -1,4 +1,5 @@
 #pragma once
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct Attributes
@@ -11,3 +12,5 @@ struct Attributes
 	static const uint8_t IndexAllocation = 0xA0;
 	static const uint8_t BitMap = 0xB0;
 };
+
+#pragma pack(pop)

@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include "PartitionTableEntry.h"
 
 struct MasterBootRecord
@@ -11,3 +11,5 @@ struct MasterBootRecord
 	PartitionTableEntry primaryPartition[4];		// 510B -> 
 	uint16_t magicNumber;
 };
+
+#pragma pack(pop)

@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct PartitionBootSector
@@ -32,3 +32,5 @@ struct PartitionBootSector
 	uint8_t bootstrapCode[426];
 	uint16_t magicNumber;		// 0xAA55
 };
+
+#pragma pack(pop)

@@ -1,13 +1,13 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct StandartInformation		// 0x10
 {
-	uint8_t creationTime[8];
-	uint8_t alteredTime[8];
-	uint8_t modificationTime[8];
-	uint8_t readTime[8];
+	uint64_t creationTime;
+	uint64_t alteredTime;
+	uint64_t modificationTime;
+	uint64_t readTime;
 	uint32_t filePermissions;
 	uint32_t maximumVersionsNumber;
 	uint32_t versionNumber;
@@ -17,3 +17,5 @@ struct StandartInformation		// 0x10
 	uint64_t quotaCharged;
 	uint64_t updateSequenceNumber;
 };
+
+#pragma pack(pop)

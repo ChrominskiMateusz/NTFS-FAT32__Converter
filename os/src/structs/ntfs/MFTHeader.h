@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct MFTHeader
@@ -20,3 +20,5 @@ struct MFTHeader
 	uint32_t MFTRecordNumber;
 	uint16_t updateSequenceNumber;
 };
+
+#pragma pack(pop)

@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 #include "headers/IndexNodeHeader.h"
 
@@ -13,3 +13,5 @@ struct IndexRoot		// 0x90
 	IndexNodeHeader indexNodeHeader;
 	//	Index Entries ...
 };
+
+#pragma pack(pop)

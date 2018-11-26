@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct NonResidentHeader
@@ -14,3 +14,5 @@ struct NonResidentHeader
 	uint64_t streamDataSize;
 	// File name in Unicode if nameLength != 0x00
 };
+
+#pragma pack(pop)

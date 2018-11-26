@@ -5,10 +5,12 @@
 #include <sstream>
 #include <string>
 #include "structs/AllStucts.h"
+#include "FAT.h"
 
 class NTFS
 {
 public:
+	FAT f;
 	NTFS (const std::string& partitionName);
 	~NTFS ();
 

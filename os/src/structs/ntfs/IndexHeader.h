@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct IndexHeader
@@ -16,3 +16,5 @@ struct IndexHeader
 	uint8_t allign[3];
 	uint16_t updateSequence;
 };
+
+#pragma pack(pop)

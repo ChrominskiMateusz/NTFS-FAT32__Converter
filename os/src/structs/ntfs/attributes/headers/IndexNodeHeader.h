@@ -1,5 +1,5 @@
 #pragma once
-#pragma pack(1)
+#pragma pack(push, 1)
 #include <stdint.h>
 
 struct IndexNodeHeader		// 
@@ -10,3 +10,5 @@ struct IndexNodeHeader		//
 	uint8_t nonLeafFlag;
 	uint8_t allign[3];
 };
+
+#pragma pack(pop)
