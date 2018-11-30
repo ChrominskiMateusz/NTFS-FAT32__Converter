@@ -6,12 +6,12 @@
 #include <string>
 #include "structs/AllStucts.h"
 
-class FAT
+class FATWrite
 {
 public:
-	FAT (const std::string& partitionName);
-	FAT () = default;
-	~FAT ();
+	FATWrite (const std::string& partitionName);
+	FATWrite () = default;
+	~FATWrite ();
 
 	int32_t searchCluster ();
 	int32_t nextCluster ();
@@ -26,6 +26,8 @@ public:
 	void writeEntry ();
 	void writeData (char* buffer, const uint32_t& bufferSize, int32_t& fileSize);
 	void writeToFAT (const uint32_t& value, int32_t& clusterNumber);
+
+	
 
 	BiosParameterBlock bpb;
 	DirectoryEntry dEntry;

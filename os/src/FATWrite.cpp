@@ -1,18 +1,18 @@
-#include "FAT.h"
+#include "FATWrite.h"
 #include <Windows.h>
 #include <stdio.h>
 
-FAT::FAT (const std::string& partitionName)
+FATWrite::FATWrite (const std::string& partitionName)
 {
 	partition.open (partitionName, std::ios::binary | std::ios::out | std::ios::trunc);
 }
 
-FAT::~FAT ()
+FATWrite::~FATWrite ()
 {
 	partition.close ();
 }
 
-int32_t FAT::searchCluster ()				// returning first empty cluster number
+int32_t FATWrite::searchCluster ()				// returning first empty cluster number
 {
 	partition.seekg (fatOffset + (5 * sizeof uint32_t));
 	uint32_t value;
@@ -26,7 +26,7 @@ int32_t FAT::searchCluster ()				// returning first empty cluster number
 	return index;
 }
 
-void FAT::addToDirectoryEntry (const FileName& fName, char* name)
+void FATWrite::addToDirectoryEntry (const FileName& fName, char* name)
 {
 	dEntry = {};
 	setName (fName, name);
@@ -38,7 +38,7 @@ void FAT::addToDirectoryEntry (const FileName& fName, char* name)
 	setAttributes (fName);
 }
 
-void FAT::setName (const FileName& fName, char * name)
+void FATWrite::setName (const FileName& fName, char * name)
 {
 	if (fName.flags == 0x10000000)					// if dir
 		for (int i{}; i < fName.filenameLength && i < 8; i++)		// copy name
@@ -53,19 +53,19 @@ void FAT::setName (const FileName& fName, char * name)
 	}
 }
 
-void FAT::setClusterEntry (const FileName& fName)
+void FATWrite::setClusterEntry (const FileName& fName)
 {
 	uint32_t clusterNbr = searchCluster ();						// find first cluster
 	dEntry.firstClusterHi = static_cast<uint16_t>((clusterNbr & 0xFFFF0000) >> 16);
 	dEntry.firstClusterLow = static_cast<uint16_t>(clusterNbr & 0x0000FFFF);
 }
 
-void FAT::setSize (const FileName& fName)
+void FATWrite::setSize (const FileName& fName)
 {
 	dEntry.size = static_cast<uint32_t>(fName.realFileSize);
 }
 
-void FAT::setCDateCTime (const FileName& fName)
+void FATWrite::setCDateCTime (const FileName& fName)
 {
 	FILETIME ftCreate;
 	SYSTEMTIME stUTC;
@@ -83,7 +83,7 @@ void FAT::setCDateCTime (const FileName& fName)
 	dEntry.cTime |= stUTC.wHour & 0xF800;
 }
 
-void FAT::setMDateMTime (const FileName& fName)
+void FATWrite::setMDateMTime (const FileName& fName)
 {
 	FILETIME ftCreate;
 	SYSTEMTIME stUTC;
@@ -100,7 +100,7 @@ void FAT::setMDateMTime (const FileName& fName)
 	dEntry.wTime |= stUTC.wHour & 0xF800;
 }
 
-void FAT::setLADate (const FileName& fName)
+void FATWrite::setLADate (const FileName& fName)
 {
 	FILETIME ftCreate;
 	SYSTEMTIME stUTC;
@@ -113,7 +113,7 @@ void FAT::setLADate (const FileName& fName)
 	dEntry.aTime |= stUTC.wYear & 0xFE00;
 }
 
-void FAT::setAttributes (const FileName& fName)
+void FATWrite::setAttributes (const FileName& fName)
 {
 	// READ_ONLY = 0x01, HIDDEN = 0x02, SYSTEM = 0x04, DIRECTORY = 0x10, ARCHIVE = 0x20
 
@@ -129,12 +129,12 @@ void FAT::setAttributes (const FileName& fName)
 		dEntry.attributes |= 0x10;
 }
 
-void FAT::writeEntry ()
+void FATWrite::writeEntry ()
 {
 	partition.write (reinterpret_cast<char*>(&dEntry), sizeof dEntry);
 }
 
-void FAT::writeData (char* buffer, const uint32_t& size, int32_t& fileSize)
+void FATWrite::writeData (char* buffer, const uint32_t& size, int32_t& fileSize)			// max size of buffer is bytesPerCluster
 {
 	uint16_t bytesPerCluster = bpb.sectorsPerCluster * bpb.bytesPerSector;
 	int32_t clusterNumber = searchCluster ();
@@ -149,7 +149,7 @@ void FAT::writeData (char* buffer, const uint32_t& size, int32_t& fileSize)
 		writeToFAT (nextCluster (), clusterNumber);
 }
 
-void FAT::writeToFAT (const uint32_t& value, int32_t& clusterNumber)
+void FATWrite::writeToFAT (const uint32_t& value, int32_t& clusterNumber)
 {
 	partition.seekg (fatOffset + clusterNumber * sizeof int32_t);
 	partition.write (reinterpret_cast<char*>(value), sizeof uint32_t);
@@ -158,7 +158,7 @@ void FAT::writeToFAT (const uint32_t& value, int32_t& clusterNumber)
 	partition.write (reinterpret_cast<char*>(value), sizeof uint32_t);
 }
 
-int32_t FAT::nextCluster ()
+int32_t FATWrite::nextCluster ()
 {
 	int32_t first = searchCluster();
 	int32_t next;

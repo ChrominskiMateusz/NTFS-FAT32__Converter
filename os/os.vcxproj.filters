@@ -18,13 +18,16 @@
     <ClCompile Include="src\Converter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\FAT.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\NTFS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\_main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FATWrite.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\FATRead.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -86,10 +89,13 @@
     <ClInclude Include="src\structs\ntfs\attributes\Attributes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\FAT.h">
+    <ClInclude Include="src\NTFS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\NTFS.h">
+    <ClInclude Include="src\FATWrite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FATRead.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

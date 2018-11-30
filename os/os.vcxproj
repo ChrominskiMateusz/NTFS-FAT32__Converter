@@ -159,13 +159,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\FAT.cpp" />
+    <ClCompile Include="src\FATRead.cpp" />
+    <ClCompile Include="src\FATWrite.cpp" />
     <ClCompile Include="src\NTFS.cpp" />
     <ClCompile Include="src\Converter.cpp" />
     <ClCompile Include="src\_main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\FAT.h" />
+    <ClInclude Include="src\FATRead.h" />
+    <ClInclude Include="src\FATWrite.h" />
     <ClInclude Include="src\NTFS.h" />
     <ClInclude Include="src\structs\AllStucts.h" />
     <ClInclude Include="src\structs\fat32\BiosParameterBlock.h" />
