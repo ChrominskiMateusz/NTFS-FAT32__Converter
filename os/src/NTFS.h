@@ -4,16 +4,16 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "structs/AllStucts.h"
 #include "FATWrite.h"
 
 class NTFS
 {
 public:
-	FATWrite f;
-	NTFS (const std::string& partitionName);
+	NTFS (const std::string& partitionName, const std::string& fatPartition);
 	~NTFS ();
 
+	template<class T>
+	void read (T& buffer, const uint32_t& size);
 	void getMFTChain ();
 	void readPartitionBootSector ();
 	void readINDX (const uint32_t& dLvl);
@@ -26,6 +26,7 @@ public:
 	void readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl);
 	void readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart&, const ResidentHeader&);
 	
+	FATWrite *fat;
 	uint8_t *MFTChain;
 	std::fstream partition;
 	PartitionBootSector bootSector;
@@ -35,3 +36,8 @@ public:
 	static const uint32_t END_MARKER;
 };
 
+template<class T>
+inline void NTFS::read (T& buffer, const uint32_t& size)
+{
+	partition.read (reinterpret_cast<char *>(buffer), size);
+}

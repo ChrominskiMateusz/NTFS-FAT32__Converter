@@ -5,7 +5,6 @@ FATRead::FATRead (const std::string& partitionName)
 	partition.open (partitionName, std::ios::binary | std::ios::in);
 }
 
-
 FATRead::~FATRead ()
 {
 	partition.close ();
@@ -19,12 +18,12 @@ void FATRead::readBPB ()
 	uint32_t fatSize = bpb.tableSize * bpb.bytesPerSector * bpb.fatCopies;
 
 	dataOffset = fatOffset + fatSize;
+	bytesPerCluster = bpb.sectorsPerCluster * bpb.bytesPerSector;
 }
 
 void FATRead::fileRead (const uint32_t& startCluster, int32_t& fileSize)
 {
 	uint32_t nextCluster = startCluster;
-	uint32_t bytesPerCluster = bpb.bytesPerSector * bpb.sectorsPerCluster;
 	uint8_t *buffer = new uint8_t[bytesPerCluster + 1];
 
 	while (fileSize > 0)
@@ -45,7 +44,6 @@ void FATRead::fileRead (const uint32_t& startCluster, int32_t& fileSize)
 void FATRead::directoryRead (const uint32_t& startCluster, const uint32_t& depth)
 {
 	uint32_t nextCluster = startCluster;
-	uint32_t bytesPerCluster = bpb.bytesPerSector * bpb.sectorsPerCluster;
 	DirectoryEntry *dEntr = new DirectoryEntry[bytesPerCluster / sizeof DirectoryEntry + 1];
 
 	do

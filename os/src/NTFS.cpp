@@ -1,13 +1,15 @@
 #include "NTFS.h"
 
-NTFS::NTFS (const std::string& partitionName)
+NTFS::NTFS (const std::string& partitionName, const std::string& fatPartition)
 {
 	partition.open (partitionName, std::ios::binary | std::ios::in);
+	fat = new FATWrite (fatPartition);
 }
 
 NTFS::~NTFS ()
 {
 	delete MFTChain;
+	delete fat;
 	partition.close ();
 }
 
@@ -187,12 +189,11 @@ void NTFS::readNonResidentData (uint64_t& clustersAmount)
 void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl)
 {
 	IndexEntry iEntry;
-	int32_t tP = static_cast<uint64_t>(partition.tellg ());
+	int32_t tP = partition.tellg ();
 	partition.read (reinterpret_cast<char *>(&iEntry), sizeof IndexEntry);
 	tP += iEntry.entryLength;
 	lastOffset += iEntry.entryLength;
 	size -= iEntry.entryLength;
-	partition.seekg (iEntry.entryLength - sizeof IndexEntry, partition.cur);
 	if (iEntry.recordNumber > 0x23)
 		readMFT (iEntry.recordNumber, dLvl + 1);
 	partition.seekg (tP);

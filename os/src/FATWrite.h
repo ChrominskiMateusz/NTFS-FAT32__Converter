@@ -4,13 +4,13 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <map>
 #include "structs/AllStucts.h"
 
 class FATWrite
 {
 public:
 	FATWrite (const std::string& partitionName);
-	FATWrite () = default;
 	~FATWrite ();
 
 	int32_t searchCluster ();
@@ -23,12 +23,15 @@ public:
 	void setMDateMTime (const FileName&);
 	void setLADate (const FileName&);
 	void setAttributes (const FileName&);
-	void writeEntry ();
+	void writeEntry (const uint32_t& depth);
 	void writeData (char* buffer, const uint32_t& bufferSize, int32_t& fileSize);
 	void writeToFAT (const uint32_t& value, int32_t& clusterNumber);
-
+	void setEntryPointer (const uint32_t& depth);
+	void readBPB ();
 	
-
+	std::map<uint32_t, uint32_t> entryClusters;
+	std::map<uint32_t, uint32_t> offsetOfEntries;
+	uint16_t bytesPerCluster;
 	BiosParameterBlock bpb;
 	DirectoryEntry dEntry;
 	std::fstream partition;
