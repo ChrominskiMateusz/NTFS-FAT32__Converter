@@ -21,6 +21,8 @@ void NTFS::readPartitionBootSector ()
 	partition.read (reinterpret_cast<char *>(&bootSector), sizeof (PartitionBootSector));
 	if (bootSector.magicNumber != 0xAA55)
 		return;
+
+	clusterSize = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 }
 
 void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
@@ -159,8 +161,7 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 	{
 		p = new uint8_t[resH.attributeLength];
 		partition.read (reinterpret_cast<char *>(p), resH.attributeLength);
-		int32_t bufferSize = resH.attributeLength;
-		fat->writeData (reinterpret_cast<char *>(p), bufferSize, fSize);
+		fat->writeData (reinterpret_cast<char *>(p), resH.attributeLength, fSize, fileSize);
 	}
 	else
 	{
@@ -169,8 +170,8 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 		while (p[chainIndex] != 0x00)
 		{
 			std::pair<uint64_t, uint64_t> tmp = decodeChain (p, chainIndex);
-			partition.seekg (tmp.second * 4096);
-			readNonResidentData (tmp.first, fSize);
+			partition.seekg (tmp.second * clusterSize);
+			readNonResidentData (tmp.first, fSize, fileSize);
 		}
 	}
 	delete p;
@@ -191,14 +192,13 @@ void NTFS::readINDX (const uint32_t& depth)
 	}
 }
 
-void NTFS::readNonResidentData (uint64_t& clustersAmount, int64_t& fileSize)
+void NTFS::readNonResidentData (uint64_t& clustersAmount, int64_t& leftSize, const int64_t& fileSize)
 {
-	uint16_t clusterSize = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 	char *t = new char[clusterSize];
 	while (clustersAmount-- > 0)
 	{
 		partition.read (t, clusterSize);
-		fat->writeData (t, clusterSize, fileSize);
+		fat->writeData (t, clusterSize, leftSize, fileSize);
 	}
 	delete t;
 }

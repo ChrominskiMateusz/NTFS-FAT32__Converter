@@ -24,8 +24,8 @@ public:
 	void setLADate (const FileName&);
 	void setAttributes (const FileName&);
 	void writeEntry (const uint32_t& depth);
-	void writeData (char* buffer, const uint32_t& bufferSize, int64_t& fileSize);
-	void writeToFAT (const uint32_t& value, int32_t& clusterNumber);
+	void writeData (char* buffer, const uint32_t& bufferSize, int64_t& leftSize, const uint64_t& fileSize);
+	void writeToFAT (const uint32_t& value, const int32_t& clusterNumber);
 	void setEntryPointer (const uint32_t& parentNumber);
 	void addToMap (const MFTHeader&);
 	uint32_t calculateClusterNumber ();
