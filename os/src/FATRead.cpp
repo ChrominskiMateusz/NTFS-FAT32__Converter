@@ -32,7 +32,7 @@ void FATRead::fileRead (const uint32_t& startCluster, int32_t& fileSize)
 		partition.read (reinterpret_cast<char*>(buffer), bytesPerCluster);
 
 		buffer[fileSize >= bytesPerCluster ? bytesPerCluster : fileSize] = '\0';
-		std::cout << buffer;
+		//std::cout << buffer;
 		fileSize -= bytesPerCluster;
 
 		nextCluster = getNextCluster (nextCluster);

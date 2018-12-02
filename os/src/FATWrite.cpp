@@ -52,17 +52,32 @@ void FATWrite::addToDirectoryEntry (const FileName& fName, char* name)
 
 void FATWrite::setName (const FileName& fName, char * name)
 {
+	int i{};
 	if (fName.flags == 0x10000000)					// if dir
-		for (int i{}; i < fName.filenameLength && i < 8; i++)		// copy name
-			dEntry.name[i] = name[i * 2];
+	{
+		for (; i < fName.filenameLength && i < 8; i++)		// copy name
+			if (name[i * 2] > 0x60 && name[i * 2] < 0x7B)
+				dEntry.name[i] = name[i * 2] - 0x20;
+			else
+				dEntry.name[i] = name[i * 2];
+
+		for (int j{}; j < 3; j++)
+			dEntry.ext[j] = 0x20;
+	}
 	else
 	{
-		for (int i{}; name[i * 2] != '.' && i < 8; i++)	// copy name
-			dEntry.name[i] = name[i * 2];
+		for (; name[i * 2] != '.' && i < 8; i++)	// copy name
+			if (name[i * 2] > 0x60 && name[i * 2] < 0x7B)
+				dEntry.name[i] = name[i * 2] - 0x20;
+			else
+				dEntry.name[i] = name[i * 2];
 
-		for (int i{ fName.filenameLength - 3 }, j{}; i < fName.filenameLength; i++, j++)	// and ext
-			dEntry.ext[j] = name[i * 2];
+		for (int k{ fName.filenameLength - 3 }, j{}; k < fName.filenameLength; k++, j++)	// and ext
+			dEntry.ext[j] = name[k * 2] - 0x20;
 	}
+
+	for (; i < 8; i++)
+		dEntry.name[i] = 0x20;
 }
 
 void FATWrite::setClusterEntry (const FileName& fName)
@@ -138,9 +153,15 @@ void FATWrite::setAttributes (const FileName& fName)
 	if (fName.flags & 0x0004)
 		dEntry.attributes |= 0x04;
 	if (fName.flags & 0x0020)
+	{
 		dEntry.attributes |= 0x20;
+		dEntry.reserved = 0x18;
+	}
 	if (fName.flags & 0x10000000)
+	{
 		dEntry.attributes |= 0x10;
+		dEntry.reserved = 0x08;
+	}
 }
 
 void FATWrite::writeEntry (const uint32_t& depth)
