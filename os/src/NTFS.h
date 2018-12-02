@@ -19,12 +19,12 @@ public:
 	void readINDX (const uint32_t& dLvl);
 	void moveToMFTChain (CommonHeaderPart&);
 	uint64_t getVCNOffset (const uint32_t& VCN);
-	void readNonResidentData (uint64_t& clustersAmount);
-	void printName (const FileName&, const uint32_t& dLvl);
+	void readNonResidentData (uint64_t& clustersAmount, int64_t& fileSize);
+	void printName (const FileName&, const char* name, const uint32_t& depth);
 	void readMFT (const uint32_t& VCN, const uint32_t& dLvl);
 	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
 	void readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl);
-	void readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart&, const ResidentHeader&);
+	void readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart&, const ResidentHeader&, const uint64_t& fileSize);
 	
 	FATWrite *fat;
 	uint8_t *MFTChain;

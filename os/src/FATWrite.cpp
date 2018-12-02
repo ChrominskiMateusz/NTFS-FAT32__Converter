@@ -22,6 +22,9 @@ void FATWrite::readBPB ()
 
 	dataOffset = fatOffset + fatSize * bpb.fatCopies;
 	bytesPerCluster = bpb.sectorsPerCluster * bpb.bytesPerSector;
+
+	entryClusters[1] = bpb.rootCluster;
+	offsetOfEntries[1] = 0;
 }
 
 int32_t FATWrite::searchCluster ()				// returning first empty cluster number
@@ -57,7 +60,7 @@ void FATWrite::setName (const FileName& fName, char * name)
 			dEntry.name[i] = name[i * 2];
 	else
 	{
-		for (int i{}; name[i] != '.' && i < 8; i++)			// copy name
+		for (int i{}; name[i * 2] != '.' && i < 8; i++)	// copy name
 			dEntry.name[i] = name[i * 2];
 
 		for (int i{ fName.filenameLength - 3 }, j{}; i < fName.filenameLength; i++, j++)	// and ext
@@ -67,9 +70,11 @@ void FATWrite::setName (const FileName& fName, char * name)
 
 void FATWrite::setClusterEntry (const FileName& fName)
 {
-	uint32_t clusterNbr = searchCluster ();						// find first cluster
+	int32_t clusterNbr = searchCluster ();						// find first cluster
 	dEntry.firstClusterHi = static_cast<uint16_t>((clusterNbr & 0xFFFF0000) >> 16);
 	dEntry.firstClusterLow = static_cast<uint16_t>(clusterNbr & 0x0000FFFF);
+	writeToFAT (0x0FFFFFFF, clusterNbr);
+	clearCluster (clusterNbr);
 }
 
 void FATWrite::setSize (const FileName& fName)
@@ -147,63 +152,90 @@ void FATWrite::writeEntry (const uint32_t& depth)
 	partition.write (reinterpret_cast<char*>(&dEntry), sizeof dEntry);
 }
 
-void FATWrite::writeData (char* buffer, const uint32_t& size, int32_t& fileSize)			// max size of buffer is bytesPerCluster
+void FATWrite::writeData (char* buffer, const uint32_t& size, int64_t& fileSize)			// max size of buffer is bytesPerCluster
 {
-	int32_t clusterNumber = searchCluster ();
+	int32_t clusterNumber;
+	if (dEntry.size == fileSize)
+		clusterNumber = calculateClusterNumber ();
+	else
+		clusterNumber = searchCluster ();
 
 	partition.seekg (dataOffset + bytesPerCluster * (clusterNumber - 2));
 	partition.write (buffer, size);
 	fileSize -= bytesPerCluster;
 	
 	if (fileSize <= 0)
-		writeToFAT (0xFFFFFF0F, clusterNumber);
+		writeToFAT (0x0FFFFFFF, clusterNumber);
 	else
-		writeToFAT (nextCluster (), clusterNumber);
+		writeToFAT (searchCluster (), clusterNumber);
 }
 
 void FATWrite::writeToFAT (const uint32_t& value, int32_t& clusterNumber)
 {
+	uint32_t p = value;
 	partition.seekg (fatOffset + clusterNumber * sizeof int32_t);
-	partition.write (reinterpret_cast<char*>(value), sizeof uint32_t);
+	partition.write (reinterpret_cast<const char*>(&p), sizeof int32_t);
 
 	partition.seekg (copyOffset + clusterNumber * sizeof int32_t);
-	partition.write (reinterpret_cast<char*>(value), sizeof uint32_t);
+	partition.write (reinterpret_cast<const char*>(&p), sizeof int32_t);
 }
 
-void FATWrite::setEntryPointer (const uint32_t& depth)
+void FATWrite::setEntryPointer (const uint32_t& parentNumber)
 {
 	int32_t cluster;
-	auto clusterPointer = entryClusters.find (depth);
+	auto clusterPointer = entryClusters.find (parentNumber);
 	
 	if (clusterPointer != entryClusters.end ())					// check if exist
 		cluster = clusterPointer->second;
 	else
 	{
-		cluster = searchCluster ();
-		writeToFAT (0xFFFFFF0F, cluster);
-		entryClusters[depth] = cluster;
-		offsetOfEntries[depth] = 0;
+		cluster = calculateClusterNumber ();
+		writeToFAT (0x0FFFFFFF, cluster);
+		entryClusters[parentNumber] = cluster;
+		offsetOfEntries[parentNumber] = 0;
 	}
 
-	if (offsetOfEntries[depth] + sizeof DirectoryEntry > bpb.bytesPerSector * bpb.sectorsPerCluster)
+	if (offsetOfEntries[parentNumber] + sizeof DirectoryEntry >  bytesPerCluster)
 	{
-		offsetOfEntries[depth] = 0;
-		entryClusters[depth] = searchCluster ();
-		writeToFAT (entryClusters[depth], cluster);
-		cluster = entryClusters[depth];
+		offsetOfEntries[parentNumber] = 0;
+		entryClusters[parentNumber] = searchCluster ();
+		writeToFAT (entryClusters[parentNumber], cluster);
+		cluster = entryClusters[parentNumber];
 	}
 
-	partition.seekg (dataOffset + offsetOfEntries[depth] + bytesPerCluster * (cluster - 2));
+	partition.seekg (dataOffset + offsetOfEntries[parentNumber] + bytesPerCluster * (cluster - 2));
+	std::cout << offsetOfEntries[parentNumber] << " " << partition.tellg ();
 
-	offsetOfEntries[depth] += sizeof DirectoryEntry;
+	offsetOfEntries[parentNumber] += sizeof DirectoryEntry;
 }
+
+void FATWrite::addToMap (const MFTHeader& mft)
+{
+	entryClusters[mft.MFTRecordNumber] = calculateClusterNumber ();
+	offsetOfEntries[mft.MFTRecordNumber] = 0;
+}
+
+uint32_t FATWrite::calculateClusterNumber ()
+{
+	return (static_cast<uint32_t>(dEntry.firstClusterHi)) << 16 | (static_cast<uint32_t>(dEntry.firstClusterLow));
+}
+
+void FATWrite::clearCluster (const int32_t& cluusterNumber)
+{
+	char empty[512]{};
+
+	partition.seekg (dataOffset + bytesPerCluster * (cluusterNumber - 2));
+	for (int i{}; i < bytesPerCluster; i += 512)
+		partition.write (empty, 512);
+}
+
 
 int32_t FATWrite::nextCluster ()
 {
 	int32_t first = searchCluster();
 	int32_t next;
 
-	writeToFAT (0xFFFFFFFF, first);
+	writeToFAT (0x0FFFFFFF, first);
 	next = searchCluster ();
 	writeToFAT (0x00000000, first);
 

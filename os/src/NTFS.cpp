@@ -4,6 +4,9 @@ NTFS::NTFS (const std::string& partitionName, const std::string& fatPartition)
 {
 	partition.open (partitionName, std::ios::binary | std::ios::in);
 	fat = new FATWrite (fatPartition);
+	fat->readBPB ();
+	fat->entryClusters[0x05] = fat->bpb.rootCluster;
+	fat->offsetOfEntries[0x05] = 0;
 }
 
 NTFS::~NTFS ()
@@ -20,7 +23,7 @@ void NTFS::readPartitionBootSector ()
 		return;
 }
 
-void NTFS::readMFT (const uint32_t& VCN, const uint32_t& dLvl)
+void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 {
 	MFTHeader mftH;
 	CommonHeaderPart comH;
@@ -60,25 +63,38 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& dLvl)
 		case Attributes::FileName:
 		{
 			partition.read (reinterpret_cast<char *>(&fName), sizeof FileName);
-			printName (fName, dLvl);
+			char *n = new char[fName.filenameLength * 2];
+			partition.read (n, fName.filenameLength * 2);
+			printName (fName, n, depth);
+			if (depth)
+			{
+				fat->addToDirectoryEntry (fName, n);
+				if(fName.flags == 0x10000000)
+					fat->addToMap (mftH);
+				fat->writeEntry (fName.parentRecordNumberStart);
+			}
+			delete n;
 		}
-			break;
+		break;
 		case Attributes::ObjectID:
 			partition.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);
 			break;
 		case Attributes::Data:
-			readData (dataLength, chainIndex, comH, resH);
+			readData (dataLength, chainIndex, comH, resH, fName.realFileSize);
 			break;
 		case Attributes::IndexRoot:
+		{
 			partition.read (reinterpret_cast<char *>(&iRoot), sizeof IndexRoot);
 			dataLength -= sizeof IndexRoot;
 			while (dataLength > 0)
 			{
 				uint64_t k = 0;
-				readIndexRecord (dataLength, k, dLvl);
+				readIndexRecord (dataLength, k, depth);
 			}
-			break;
+		}
+		break;
 		case Attributes::IndexAllocation:
+		{
 			uint8_t *chain = new uint8_t[dataLength + 1];
 			chain[dataLength] = 0x00;
 			partition.read (reinterpret_cast<char *>(chain), dataLength);
@@ -86,10 +102,11 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& dLvl)
 			{
 				std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
 				partition.seekg (tmp.second * 4096);
-				readINDX (dLvl);
+				readINDX (depth);
 			}
 			delete chain;
-			break;
+		}
+		break;
 		}
 
 		partition.seekg (tmpOffset + comH.length);
@@ -134,15 +151,16 @@ std::pair<uint64_t, uint64_t> NTFS::decodeChain (uint8_t* chain, uint16_t& chain
 	return sizeAndOffset;
 }
 
-void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart& comH, const ResidentHeader& resH)
+void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart& comH, const ResidentHeader& resH, const uint64_t& fileSize)
 {
+	int64_t fSize = fileSize;
 	uint8_t *p;
 	if (!comH.residentFlag)
 	{
-		p = new uint8_t[resH.attributeLength + 1];
+		p = new uint8_t[resH.attributeLength];
 		partition.read (reinterpret_cast<char *>(p), resH.attributeLength);
-		p[resH.attributeLength] = '\0';
-		//std::cout << p;
+		int32_t bufferSize = resH.attributeLength;
+		fat->writeData (reinterpret_cast<char *>(p), bufferSize, fSize);
 	}
 	else
 	{
@@ -152,13 +170,13 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 		{
 			std::pair<uint64_t, uint64_t> tmp = decodeChain (p, chainIndex);
 			partition.seekg (tmp.second * 4096);
-			readNonResidentData (tmp.first);
+			readNonResidentData (tmp.first, fSize);
 		}
 	}
 	delete p;
 }
 
-void NTFS::readINDX (const uint32_t& dLvl)
+void NTFS::readINDX (const uint32_t& depth)
 {
 	IndexHeader iHead;
 	partition.read (reinterpret_cast<char *>(&iHead), sizeof IndexHeader);
@@ -168,25 +186,24 @@ void NTFS::readINDX (const uint32_t& dLvl)
 	while (size > 0)
 	{
 		uint64_t tmp = partition.tellg ();
-		readIndexRecord (size, tmp, dLvl);
+		readIndexRecord (size, tmp, depth);
 		partition.seekg (tmp);
 	}
 }
 
-void NTFS::readNonResidentData (uint64_t& clustersAmount)
+void NTFS::readNonResidentData (uint64_t& clustersAmount, int64_t& fileSize)
 {
 	uint16_t clusterSize = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
-	uint8_t *t = new uint8_t[clusterSize + 1];
+	char *t = new char[clusterSize];
 	while (clustersAmount-- > 0)
 	{
-		partition.read (reinterpret_cast<char *>(t), clusterSize);
-		t[clusterSize] = '\0';
-		//std::cout << "Big file right here" << std::endl;
+		partition.read (t, clusterSize);
+		fat->writeData (t, clusterSize, fileSize);
 	}
 	delete t;
 }
 
-void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl)
+void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& depth)
 {
 	IndexEntry iEntry;
 	int32_t tP = partition.tellg ();
@@ -195,24 +212,21 @@ void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t&
 	lastOffset += iEntry.entryLength;
 	size -= iEntry.entryLength;
 	if (iEntry.recordNumber > 0x23)
-		readMFT (iEntry.recordNumber, dLvl + 1);
+		readMFT (iEntry.recordNumber, depth + 1);
 	partition.seekg (tP);
 }
 
-void NTFS::printName (const FileName& fName, const uint32_t& dLvl)
+void NTFS::printName (const FileName& fName, const char* name, const uint32_t& depth)
 {
-	uint8_t *n = new uint8_t[fName.filenameLength * 2];
 	uint8_t *fn = new uint8_t[fName.filenameLength + 1];
-	partition.read (reinterpret_cast<char *>(n), fName.filenameLength * 2);
 	for (int i = 0, j = 0; i < fName.filenameLength * 2; i += 2, j++)
-		fn[j] = n[i];
+		fn[j] = name[i];
 	fn[fName.filenameLength] = '\0';
-	for (int i{}; i < dLvl; i++)
+	for (int i{}; i < depth; i++)
 		std::cout << "-";
 	if (fName.flags == 0x10000000)
 		std::cout << "Dir:  ";
 	std::cout << fn << std::endl;
-	delete n;
 	delete fn;
 }
 
