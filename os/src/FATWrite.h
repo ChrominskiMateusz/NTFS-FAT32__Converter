@@ -18,7 +18,7 @@ public:
 	void addToDirectoryEntry (const FileName&, char* name);
 	void setName (const FileName&, char* name);
 	void setClusterEntry (const FileName&);
-	void setSize (const FileName&);
+	void setSize (const uint32_t& size);
 	void setCDateCTime (const FileName&);
 	void setMDateMTime (const FileName&);
 	void setLADate (const FileName&);

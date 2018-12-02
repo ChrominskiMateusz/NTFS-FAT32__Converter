@@ -71,9 +71,11 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 			if (depth)
 			{
 				fat->addToDirectoryEntry (fName, n);
-				if(fName.flags == 0x10000000)
+				if (fName.flags == 0x10000000)
+				{
 					fat->addToMap (mftH);
-				fat->writeEntry (fName.parentRecordNumberStart);
+					fat->writeEntry (fName.parentRecordNumberStart);
+				}
 			}
 			delete n;
 		}
@@ -83,6 +85,7 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 			break;
 		case Attributes::Data:
 			readData (dataLength, chainIndex, comH, resH, fName.realFileSize);
+			fat->writeEntry (fName.parentRecordNumberStart);
 			break;
 		case Attributes::IndexRoot:
 		{
@@ -161,6 +164,7 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 	{
 		p = new uint8_t[resH.attributeLength];
 		partition.read (reinterpret_cast<char *>(p), resH.attributeLength);
+		fat->setSize (resH.attributeLength);
 		fat->writeData (reinterpret_cast<char *>(p), resH.attributeLength, fSize, fileSize);
 	}
 	else

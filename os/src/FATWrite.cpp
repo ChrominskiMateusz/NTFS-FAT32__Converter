@@ -43,7 +43,7 @@ void FATWrite::addToDirectoryEntry (const FileName& fName, char* name)
 	dEntry = {};
 	setName (fName, name);
 	setClusterEntry (fName);
-	setSize (fName);
+	setSize (fName.realFileSize);
 	setCDateCTime (fName);
 	setMDateMTime (fName);
 	setLADate (fName);
@@ -74,9 +74,9 @@ void FATWrite::setClusterEntry (const FileName& fName)
 	clearCluster (clusterNbr);
 }
 
-void FATWrite::setSize (const FileName& fName)
+void FATWrite::setSize (const uint32_t& size)
 {
-	dEntry.size = static_cast<uint32_t>(fName.realFileSize);
+	dEntry.size = size;
 }
 
 void FATWrite::setCDateCTime (const FileName& fName)
@@ -89,12 +89,12 @@ void FATWrite::setCDateCTime (const FileName& fName)
 	//printf ("Created on: %02d/%02d/%d %02d:%02d\n", stUTC.wDay, stUTC.wMonth, stUTC.wYear, stUTC.wHour, stUTC.wMinute);
 
 	dEntry.cDate |= stUTC.wDay & 0x001F;
-	dEntry.cDate |= stUTC.wMonth & 0x01E0;
-	dEntry.cDate |= stUTC.wYear & 0xFE00;
-
+	dEntry.cDate |= (stUTC.wMonth << 5) & 0x01E0;
+	dEntry.cDate |= ((stUTC.wYear - 1980) << 9) & 0xFE00;
+					
 	dEntry.cTime |= (stUTC.wSecond / 2) & 0x001F;
-	dEntry.cTime |= stUTC.wMinute & 0x07E0;
-	dEntry.cTime |= stUTC.wHour & 0xF800;
+	dEntry.cTime |= (stUTC.wMinute << 5) & 0x07E0;
+	dEntry.cTime |= (stUTC.wHour << 11) & 0xF800;
 }
 
 void FATWrite::setMDateMTime (const FileName& fName)
@@ -105,13 +105,13 @@ void FATWrite::setMDateMTime (const FileName& fName)
 	ftCreate.dwHighDateTime = DWORD ((fName.modificationTime & 0xFFFFFFFF00000000) >> 32);
 	FileTimeToSystemTime (&ftCreate, &stUTC);
 
-	dEntry.wDate |= stUTC.wDay & 0x001F;
-	dEntry.wDate |= stUTC.wMonth & 0x01E0;
-	dEntry.wDate |= stUTC.wYear & 0xFE00;
+	dEntry.wDate |= stUTC.wDay;
+	dEntry.wDate |= stUTC.wMonth << 5;
+	dEntry.wDate |= (stUTC.wYear - 1980) << 9;
 
-	dEntry.wTime |= (stUTC.wSecond / 2) & 0x001F;
-	dEntry.wTime |= stUTC.wMinute & 0x07E0;
-	dEntry.wTime |= stUTC.wHour & 0xF800;
+	dEntry.wTime |= stUTC.wSecond / 2;
+	dEntry.wTime |= stUTC.wMinute << 5;
+	dEntry.wTime |= stUTC.wHour << 11;
 }
 
 void FATWrite::setLADate (const FileName& fName)
@@ -123,8 +123,8 @@ void FATWrite::setLADate (const FileName& fName)
 	FileTimeToSystemTime (&ftCreate, &stUTC);
 
 	dEntry.aTime |= stUTC.wDay & 0x001F;
-	dEntry.aTime |= stUTC.wMonth & 0x01E0;
-	dEntry.aTime |= stUTC.wYear & 0xFE00;
+	dEntry.aTime |= (stUTC.wMonth << 5) & 0x01E0;
+	dEntry.aTime |= ((stUTC.wYear - 1980) << 9) & 0xFE00;
 }
 
 void FATWrite::setAttributes (const FileName& fName)
