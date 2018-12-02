@@ -25,14 +25,21 @@ public:
 	std::pair<uint64_t, uint64_t> decodeChain (uint8_t* chain, uint16_t& chainIndex);
 	void readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl);
 	void readData (const uint32_t& dataLength, uint16_t& chainIndex, const CommonHeaderPart&, const ResidentHeader&, const uint64_t& fileSize);
+	void calculateMFTRecordSize ();
+	void readMFT (const uint32_t& VCN, MFTHeader&);
+	bool readAttributeHeader (CommonHeaderPart&, NonResidentHeader&, ResidentHeader&);
+	void readFileName (FileName&, const uint32_t& depth, MFTHeader&);
+	void readIndexRoot (int32_t& size, IndexRoot&, const uint32_t& depth);
+	void readIndexAllocation (int32_t& dataLength, uint16_t& chainIndex, const uint32_t& depth);
 	
+	uint16_t mftSizeB;
 	uint16_t clusterSize;
 	FATWrite *fat;
 	uint8_t *MFTChain;
 	std::fstream partition;
 	PartitionBootSector bootSector;
 
-	static const uint16_t MFT_SIZE_B;
+
 	static const uint8_t RESERVED_MFT;
 	static const uint32_t END_MARKER;
 };

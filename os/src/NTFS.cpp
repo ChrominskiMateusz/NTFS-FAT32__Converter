@@ -23,6 +23,7 @@ void NTFS::readPartitionBootSector ()
 		return;
 
 	clusterSize = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
+	mftSizeB = 0;
 }
 
 void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
@@ -36,26 +37,16 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 	ObjectID oID;
 	IndexRoot iRoot;
 
-	uint32_t offset = getVCNOffset (VCN);
-
-	partition.seekg (offset, partition.beg);
-	partition.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
-	partition.seekg (offset + mftH.firstAttributeOffset, partition.beg);
-
-	while (true)
+	readMFT (VCN, mftH);
+	while (true)									// iterate attributes
 	{
 		uint32_t tmpOffset = partition.tellg ();
-		partition.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
-		if (comH.attributeType == END_MARKER)
+		uint16_t chainIndex{};
+
+		if (!readAttributeHeader (comH, nResH, resH))
 			break;
-		if (comH.residentFlag == 0x01)
-			partition.read (reinterpret_cast<char *>(&nResH), sizeof NonResidentHeader);
-		else
-			partition.read (reinterpret_cast<char *>(&resH), sizeof ResidentHeader);
-		partition.seekg (comH.nameLength * 2, partition.cur);
 
 		int32_t dataLength = comH.length - (static_cast<uint32_t>(partition.tellg ()) - tmpOffset);
-		uint16_t chainIndex{};
 
 		switch (comH.attributeType)
 		{
@@ -63,23 +54,8 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 			partition.read (reinterpret_cast<char *>(&sInf), sizeof StandartInformation);
 			break;
 		case Attributes::FileName:
-		{
-			partition.read (reinterpret_cast<char *>(&fName), sizeof FileName);
-			char *n = new char[fName.filenameLength * 2];
-			partition.read (n, fName.filenameLength * 2);
-			printName (fName, n, depth);
-			if (depth)
-			{
-				fat->addToDirectoryEntry (fName, n);
-				if (fName.flags == 0x10000000)
-				{
-					fat->addToMap (mftH);
-					fat->writeEntry (fName.parentRecordNumberStart);
-				}
-			}
-			delete n;
-		}
-		break;
+			readFileName (fName, depth, mftH);
+			break;
 		case Attributes::ObjectID:
 			partition.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);
 			break;
@@ -88,39 +64,18 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 			fat->writeEntry (fName.parentRecordNumberStart);
 			break;
 		case Attributes::IndexRoot:
-		{
-			partition.read (reinterpret_cast<char *>(&iRoot), sizeof IndexRoot);
-			dataLength -= sizeof IndexRoot;
-			while (dataLength > 0)
-			{
-				uint64_t k = 0;
-				readIndexRecord (dataLength, k, depth);
-			}
-		}
-		break;
+			readIndexRoot (dataLength, iRoot, depth);
+			break;
 		case Attributes::IndexAllocation:
-		{
-			uint8_t *chain = new uint8_t[dataLength + 1];
-			chain[dataLength] = 0x00;
-			partition.read (reinterpret_cast<char *>(chain), dataLength);
-			while (chain[chainIndex] != 0x00)
-			{
-				std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
-				partition.seekg (tmp.second * 4096);
-				readINDX (depth);
-			}
-			delete chain;
+			readIndexAllocation (dataLength, chainIndex, depth);
+			break;
 		}
-		break;
-		}
-
 		partition.seekg (tmpOffset + comH.length);
 	}
 }
 
 uint64_t NTFS::getVCNOffset (const uint32_t& VCN)
 {
-	uint32_t bytesPerCluster = bootSector.bytesPerSector * bootSector.sectorsPerCluster;
 	uint16_t chainIndex{};
 	uint32_t rangeVCN{};
 	std::pair<uint64_t, uint64_t> sizeAndOffset;
@@ -128,11 +83,11 @@ uint64_t NTFS::getVCNOffset (const uint32_t& VCN)
 	while (VCN > rangeVCN)
 	{
 		sizeAndOffset = decodeChain (MFTChain, chainIndex);
-		rangeVCN += sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
+		rangeVCN += sizeAndOffset.first * (clusterSize / mftSizeB);
 	}
 
-	rangeVCN -= sizeAndOffset.first * (bytesPerCluster / MFT_SIZE_B);
-	return sizeAndOffset.second * bytesPerCluster + (VCN - rangeVCN) * MFT_SIZE_B;
+	rangeVCN -= sizeAndOffset.first * (clusterSize / mftSizeB);
+	return sizeAndOffset.second * clusterSize + (VCN - rangeVCN) * mftSizeB;
 }
 
 std::pair<uint64_t, uint64_t> NTFS::decodeChain (uint8_t* chain, uint16_t& chainIndex)
@@ -179,6 +134,88 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 		}
 	}
 	delete p;
+}
+
+void NTFS::calculateMFTRecordSize ()
+{
+	uint16_t chainIndex{};
+	std::pair<uint64_t, uint64_t> sizeAndOffset = decodeChain (MFTChain, chainIndex);
+	char *buffer = new char[bootSector.bytesPerSector];
+	partition.seekg (sizeAndOffset.second * clusterSize + bootSector.bytesPerSector);
+
+	while (true)		// while(! FILE0 )
+	{
+		partition.read (reinterpret_cast<char *>(buffer), bootSector.bytesPerSector);
+		mftSizeB += bootSector.bytesPerSector;
+		if (buffer[0] == 0x46 && buffer[1] == 0x49 && buffer[2] == 0x4C && buffer[3] == 0x45 && buffer[4] == 0x30)
+			break;
+	}
+}
+
+void NTFS::readMFT (const uint32_t& VCN, MFTHeader& mftH)
+{
+	uint32_t offset = getVCNOffset (VCN);
+
+	partition.seekg (offset, partition.beg);
+	partition.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
+	partition.seekg (offset + mftH.firstAttributeOffset, partition.beg);
+}
+
+bool NTFS::readAttributeHeader (CommonHeaderPart& comH, NonResidentHeader& nResH, ResidentHeader& resH)
+{
+	partition.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
+	if (comH.attributeType == END_MARKER)
+		return false;
+	if (comH.residentFlag == 0x01)
+		partition.read (reinterpret_cast<char *>(&nResH), sizeof NonResidentHeader);
+	else
+		partition.read (reinterpret_cast<char *>(&resH), sizeof ResidentHeader);
+	partition.seekg (comH.nameLength * 2, partition.cur);
+
+	return true;
+}
+
+void NTFS::readFileName (FileName& fName, const uint32_t& depth, MFTHeader& mftH)
+{
+	partition.read (reinterpret_cast<char *>(&fName), sizeof FileName);
+	char *n = new char[fName.filenameLength * 2];
+	partition.read (n, fName.filenameLength * 2);
+	printName (fName, n, depth);
+	if (depth)
+	{
+		fat->addToDirectoryEntry (fName, n);
+		if (fName.flags == 0x10000000)
+		{
+			fat->addToMap (mftH);
+			fat->writeEntry (fName.parentRecordNumberStart);
+		}
+	}
+	delete n;
+}
+
+void NTFS::readIndexRoot (int32_t& dataLength, IndexRoot& iRoot, const uint32_t& depth)
+{
+	partition.read (reinterpret_cast<char *>(&iRoot), sizeof IndexRoot);
+	dataLength -= sizeof IndexRoot;
+	while (dataLength > 0)
+	{
+		uint64_t k = 0;
+		readIndexRecord (dataLength, k, depth);
+	}
+}
+
+void NTFS::readIndexAllocation (int32_t& dataLength, uint16_t& chainIndex, const uint32_t& depth)
+{
+	uint8_t *chain = new uint8_t[dataLength + 1];
+	chain[dataLength] = 0x00;
+	partition.read (reinterpret_cast<char *>(chain), dataLength);
+	while (chain[chainIndex] != 0x00)
+	{
+		std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
+		partition.seekg (tmp.second * 4096);
+		readINDX (depth);
+	}
+	delete chain;
 }
 
 void NTFS::readINDX (const uint32_t& depth)
@@ -277,6 +314,5 @@ void NTFS::moveToMFTChain (CommonHeaderPart& comH)
 	partition.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
 }
 
-const uint16_t NTFS::MFT_SIZE_B = 0x400;
 const uint8_t NTFS::RESERVED_MFT = 0x23;
 const uint32_t NTFS::END_MARKER = 0xFFFFFFFF;
