@@ -3,6 +3,7 @@
 FATRead::FATRead (const std::string& partitionName)
 {
 	partition.open (partitionName, std::ios::binary | std::ios::in);
+	readBPB ();
 }
 
 FATRead::~FATRead ()
@@ -12,7 +13,7 @@ FATRead::~FATRead ()
 
 void FATRead::readBPB ()
 {
-	partition.read (reinterpret_cast<char*>(&bpb), sizeof (BiosParameterBlock));
+	read (&bpb, sizeof BiosParameterBlock);
 
 	fatOffset = bpb.reservedSectors * bpb.bytesPerSector;
 	uint32_t fatSize = bpb.tableSize * bpb.bytesPerSector * bpb.fatCopies;
@@ -29,7 +30,7 @@ void FATRead::fileRead (const uint32_t& startCluster, int32_t& fileSize)
 	while (fileSize > 0)
 	{
 		setPointer (nextCluster);
-		partition.read (reinterpret_cast<char*>(buffer), bytesPerCluster);
+		read (buffer, bytesPerCluster);
 
 		buffer[fileSize >= bytesPerCluster ? bytesPerCluster : fileSize] = '\0';
 		//std::cout << buffer;
@@ -49,7 +50,7 @@ void FATRead::directoryRead (const uint32_t& startCluster, const uint32_t& depth
 	do
 	{
 		setPointer (nextCluster);
-		partition.read (reinterpret_cast<char*>(dEntr), bytesPerCluster);
+		read (dEntr, bytesPerCluster);
 		iterateDirectory (dEntr, bytesPerCluster, depth);
 	} while (isLastCluster (nextCluster));
 
@@ -60,7 +61,7 @@ uint32_t FATRead::getNextCluster (const uint32_t& prev)
 {
 	uint32_t next;
 	partition.seekg (fatOffset + prev * sizeof uint32_t);
-	partition.read (reinterpret_cast<char*>(&next), sizeof uint32_t);
+	read (&next, sizeof uint32_t);
 
 	return next;
 }

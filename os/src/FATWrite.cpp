@@ -15,12 +15,12 @@ FATWrite::~FATWrite ()
 void FATWrite::readBPB ()
 {
 	partition.read (reinterpret_cast<char*>(&bpb), sizeof (BiosParameterBlock));
+	uint32_t fatSize = bpb.tableSize * bpb.bytesPerSector;
 
 	fatOffset = bpb.reservedSectors * bpb.bytesPerSector;
-	uint32_t fatSize = bpb.tableSize * bpb.bytesPerSector;
 	copyOffset = fatOffset + fatSize;
-
 	dataOffset = fatOffset + fatSize * bpb.fatCopies;
+
 	bytesPerCluster = bpb.sectorsPerCluster * bpb.bytesPerSector;
 }
 
@@ -50,8 +50,8 @@ void FATWrite::addToDirectoryEntry (const FileName& fName, char* name)
 	setAttributes (fName);
 }
 
-void FATWrite::setName (const FileName& fName, char * name)
-{
+void FATWrite::setName (const FileName& fName, char* name)			// file_names, exts in FAT -> BIG LETTERS
+{																	// empty places != 0x00 -> == 0x20
 	int i{};
 	if (fName.flags == 0x10000000)					// if dir
 	{
@@ -85,6 +85,7 @@ void FATWrite::setClusterEntry (const FileName& fName)
 	int32_t clusterNbr = searchCluster ();						// find first cluster
 	dEntry.firstClusterHi = static_cast<uint16_t>((clusterNbr & 0xFFFF0000) >> 16);
 	dEntry.firstClusterLow = static_cast<uint16_t>(clusterNbr & 0x0000FFFF);
+
 	writeToFAT (0x0FFFFFFF, clusterNbr);
 	clearCluster (clusterNbr);
 }
@@ -103,13 +104,13 @@ void FATWrite::setCDateCTime (const FileName& fName)
 	FileTimeToSystemTime (&ftCreate, &stUTC);
 	//printf ("Created on: %02d/%02d/%d %02d:%02d\n", stUTC.wDay, stUTC.wMonth, stUTC.wYear, stUTC.wHour, stUTC.wMinute);
 
-	dEntry.cDate |= stUTC.wDay & 0x001F;
-	dEntry.cDate |= (stUTC.wMonth << 5) & 0x01E0;
-	dEntry.cDate |= ((stUTC.wYear - 1980) << 9) & 0xFE00;
+	dEntry.cDate |= stUTC.wDay;
+	dEntry.cDate |= stUTC.wMonth << 5;
+	dEntry.cDate |= (stUTC.wYear - 1980) << 9;
 					
-	dEntry.cTime |= (stUTC.wSecond / 2) & 0x001F;
-	dEntry.cTime |= (stUTC.wMinute << 5) & 0x07E0;
-	dEntry.cTime |= (stUTC.wHour << 11) & 0xF800;
+	dEntry.cTime |= stUTC.wSecond / 2;
+	dEntry.cTime |= stUTC.wMinute << 5;
+	dEntry.cTime |= stUTC.wHour << 11;
 }
 
 void FATWrite::setMDateMTime (const FileName& fName)
@@ -137,9 +138,9 @@ void FATWrite::setLADate (const FileName& fName)
 	ftCreate.dwHighDateTime = DWORD ((fName.readTime & 0xFFFFFFFF00000000) >> 32);
 	FileTimeToSystemTime (&ftCreate, &stUTC);
 
-	dEntry.aTime |= stUTC.wDay & 0x001F;
-	dEntry.aTime |= (stUTC.wMonth << 5) & 0x01E0;
-	dEntry.aTime |= ((stUTC.wYear - 1980) << 9) & 0xFE00;
+	dEntry.aTime |= stUTC.wDay;
+	dEntry.aTime |= stUTC.wMonth << 5;
+	dEntry.aTime |= (stUTC.wYear - 1980) << 9;
 }
 
 void FATWrite::setAttributes (const FileName& fName)
@@ -167,7 +168,7 @@ void FATWrite::setAttributes (const FileName& fName)
 void FATWrite::writeEntry (const uint32_t& depth)
 {
 	setEntryPointer (depth);
-	partition.write (reinterpret_cast<char*>(&dEntry), sizeof dEntry);
+	write (&dEntry, sizeof DirectoryEntry);
 }
 
 void FATWrite::writeData (char* buffer, const uint32_t& size, int64_t& leftSize, const uint64_t& fileSize)			// max size of buffer is bytesPerCluster
@@ -179,9 +180,9 @@ void FATWrite::writeData (char* buffer, const uint32_t& size, int64_t& leftSize,
 		clusterNumber = searchCluster ();
 
 	partition.seekg (dataOffset + bytesPerCluster * (clusterNumber - 2));
-	partition.write (buffer, size);
-	leftSize -= bytesPerCluster;
+	write (buffer, size);
 
+	leftSize -= bytesPerCluster;
 	if (leftSize <= 0)
 		writeToFAT (0x0FFFFFFF, clusterNumber);
 	else
@@ -195,10 +196,10 @@ void FATWrite::writeToFAT (const uint32_t& value, const int32_t& clusterNumber)
 {
 	uint32_t p = value;
 	partition.seekg (fatOffset + clusterNumber * sizeof int32_t);
-	partition.write (reinterpret_cast<const char*>(&p), sizeof int32_t);
+	write (&p, sizeof int32_t);
 
 	partition.seekg (copyOffset + clusterNumber * sizeof int32_t);
-	partition.write (reinterpret_cast<const char*>(&p), sizeof int32_t);
+	write (&p, sizeof int32_t);
 }
 
 void FATWrite::setEntryPointer (const uint32_t& parentNumber)
@@ -231,7 +232,7 @@ void FATWrite::clearCluster (const int32_t& cluusterNumber)
 
 	partition.seekg (dataOffset + bytesPerCluster * (cluusterNumber - 2));
 	for (int i{}; i < bytesPerCluster; i += 512)
-		partition.write (empty, 512);
+		write (empty, 512);
 }
 
 
@@ -240,7 +241,7 @@ int32_t FATWrite::nextCluster ()
 	int32_t first = searchCluster();
 	int32_t next;
 
-	writeToFAT (0x0FFFFFFF, first);
+	writeToFAT (0x0FFFFFFF, first);				// temporary write to FAT
 	next = searchCluster ();
 	writeToFAT (0x00000000, first);
 

@@ -7,6 +7,10 @@ NTFS::NTFS (const std::string& partitionName, const std::string& fatPartition)
 	fat->readBPB ();
 	fat->entryClusters[0x05] = fat->bpb.rootCluster;
 	fat->offsetOfEntries[0x05] = 0;
+
+	readPartitionBootSector ();
+	getMFTChain ();
+	calculateMFTRecordSize ();
 }
 
 NTFS::~NTFS ()
@@ -18,7 +22,7 @@ NTFS::~NTFS ()
 
 void NTFS::readPartitionBootSector ()
 {
-	partition.read (reinterpret_cast<char *>(&bootSector), sizeof (PartitionBootSector));
+	read (&bootSector, sizeof PartitionBootSector);
 	if (bootSector.magicNumber != 0xAA55)
 		return;
 
@@ -28,7 +32,7 @@ void NTFS::readPartitionBootSector ()
 
 void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 {
-	MFTHeader mftH;
+	MFTHeader mftH; 
 	CommonHeaderPart comH;
 	NonResidentHeader nResH;
 	ResidentHeader resH;
@@ -37,11 +41,11 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 	ObjectID oID;
 	IndexRoot iRoot;
 
-	readMFT (VCN, mftH);
+	readMFTHeader (VCN, mftH);
 	while (true)									// iterate attributes
 	{
-		uint32_t tmpOffset = partition.tellg ();
 		uint16_t chainIndex{};
+		uint32_t tmpOffset = partition.tellg ();
 
 		if (!readAttributeHeader (comH, nResH, resH))
 			break;
@@ -50,14 +54,14 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 
 		switch (comH.attributeType)
 		{
-		case Attributes::StandardInformation:
-			partition.read (reinterpret_cast<char *>(&sInf), sizeof StandartInformation);
+		case Attributes::StandardInformation:;
+			read (&sInf, sizeof StandartInformation);
 			break;
 		case Attributes::FileName:
 			readFileName (fName, depth, mftH);
 			break;
 		case Attributes::ObjectID:
-			partition.read (reinterpret_cast<char *>(&oID), sizeof ObjectID);
+			read (&oID, sizeof ObjectID);
 			break;
 		case Attributes::Data:
 			readData (dataLength, chainIndex, comH, resH, fName.realFileSize);
@@ -115,17 +119,17 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 {
 	int64_t fSize = fileSize;
 	uint8_t *p;
-	if (!comH.residentFlag)
+	if (!comH.residentFlag)				// small data
 	{
 		p = new uint8_t[resH.attributeLength];
-		partition.read (reinterpret_cast<char *>(p), resH.attributeLength);
+		read (p, resH.attributeLength);
 		fat->setSize (resH.attributeLength);
 		fat->writeData (reinterpret_cast<char *>(p), resH.attributeLength, fSize, fileSize);
 	}
-	else
+	else								// big data
 	{
 		p = new uint8_t[dataLength];
-		partition.read (reinterpret_cast<char *>(p), dataLength);
+		read (p, dataLength);
 		while (p[chainIndex] != 0x00)
 		{
 			std::pair<uint64_t, uint64_t> tmp = decodeChain (p, chainIndex);
@@ -136,7 +140,7 @@ void NTFS::readData (const uint32_t& dataLength, uint16_t& chainIndex, const Com
 	delete p;
 }
 
-void NTFS::calculateMFTRecordSize ()
+void NTFS::calculateMFTRecordSize ()		// simple way to get MFT record size, usually 1024 || 4096
 {
 	uint16_t chainIndex{};
 	std::pair<uint64_t, uint64_t> sizeAndOffset = decodeChain (MFTChain, chainIndex);
@@ -145,31 +149,32 @@ void NTFS::calculateMFTRecordSize ()
 
 	while (true)		// while(! FILE0 )
 	{
-		partition.read (reinterpret_cast<char *>(buffer), bootSector.bytesPerSector);
+		read (buffer, bootSector.bytesPerSector);
 		mftSizeB += bootSector.bytesPerSector;
 		if (buffer[0] == 0x46 && buffer[1] == 0x49 && buffer[2] == 0x4C && buffer[3] == 0x45 && buffer[4] == 0x30)
 			break;
 	}
 }
 
-void NTFS::readMFT (const uint32_t& VCN, MFTHeader& mftH)
+void NTFS::readMFTHeader (const uint32_t& VCN, MFTHeader& mftH)
 {
 	uint32_t offset = getVCNOffset (VCN);
 
 	partition.seekg (offset, partition.beg);
-	partition.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
+	read (&mftH, sizeof MFTHeader);
 	partition.seekg (offset + mftH.firstAttributeOffset, partition.beg);
 }
 
 bool NTFS::readAttributeHeader (CommonHeaderPart& comH, NonResidentHeader& nResH, ResidentHeader& resH)
 {
-	partition.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
+	read (&comH, sizeof CommonHeaderPart);
 	if (comH.attributeType == END_MARKER)
 		return false;
+
 	if (comH.residentFlag == 0x01)
-		partition.read (reinterpret_cast<char *>(&nResH), sizeof NonResidentHeader);
+		read (&nResH, sizeof NonResidentHeader);
 	else
-		partition.read (reinterpret_cast<char *>(&resH), sizeof ResidentHeader);
+		read (&resH, sizeof ResidentHeader);
 	partition.seekg (comH.nameLength * 2, partition.cur);
 
 	return true;
@@ -177,9 +182,9 @@ bool NTFS::readAttributeHeader (CommonHeaderPart& comH, NonResidentHeader& nResH
 
 void NTFS::readFileName (FileName& fName, const uint32_t& depth, MFTHeader& mftH)
 {
-	partition.read (reinterpret_cast<char *>(&fName), sizeof FileName);
+	read (&fName, sizeof FileName);
 	char *n = new char[fName.filenameLength * 2];
-	partition.read (n, fName.filenameLength * 2);
+	read (n, fName.filenameLength * 2);
 	printName (fName, n, depth);
 	if (depth)
 	{
@@ -195,7 +200,7 @@ void NTFS::readFileName (FileName& fName, const uint32_t& depth, MFTHeader& mftH
 
 void NTFS::readIndexRoot (int32_t& dataLength, IndexRoot& iRoot, const uint32_t& depth)
 {
-	partition.read (reinterpret_cast<char *>(&iRoot), sizeof IndexRoot);
+	read (&iRoot, sizeof IndexRoot);
 	dataLength -= sizeof IndexRoot;
 	while (dataLength > 0)
 	{
@@ -208,7 +213,7 @@ void NTFS::readIndexAllocation (int32_t& dataLength, uint16_t& chainIndex, const
 {
 	uint8_t *chain = new uint8_t[dataLength + 1];
 	chain[dataLength] = 0x00;
-	partition.read (reinterpret_cast<char *>(chain), dataLength);
+	read (chain, dataLength);
 	while (chain[chainIndex] != 0x00)
 	{
 		std::pair<uint64_t, uint64_t> tmp = decodeChain (chain, chainIndex);
@@ -221,9 +226,11 @@ void NTFS::readIndexAllocation (int32_t& dataLength, uint16_t& chainIndex, const
 void NTFS::readINDX (const uint32_t& depth)
 {
 	IndexHeader iHead;
-	partition.read (reinterpret_cast<char *>(&iHead), sizeof IndexHeader);
+	read (&iHead, sizeof IndexHeader);
+
 	partition.seekg (iHead.entriesOffset - 0x12, partition.cur);
 	iHead.entriesSize -= iHead.entriesOffset;
+
 	int32_t size = iHead.entriesSize;
 	while (size > 0)
 	{
@@ -238,7 +245,7 @@ void NTFS::readNonResidentData (uint64_t& clustersAmount, int64_t& leftSize, con
 	char *t = new char[clusterSize];
 	while (clustersAmount-- > 0)
 	{
-		partition.read (t, clusterSize);
+		read (t, clusterSize);
 		fat->writeData (t, clusterSize, leftSize, fileSize);
 	}
 	delete t;
@@ -248,10 +255,12 @@ void NTFS::readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t&
 {
 	IndexEntry iEntry;
 	int32_t tP = partition.tellg ();
-	partition.read (reinterpret_cast<char *>(&iEntry), sizeof IndexEntry);
+	read (&iEntry, sizeof IndexEntry);
+
 	tP += iEntry.entryLength;
 	lastOffset += iEntry.entryLength;
 	size -= iEntry.entryLength;
+
 	if (iEntry.recordNumber > 0x23)
 		readMFT (iEntry.recordNumber, depth + 1);
 	partition.seekg (tP);
@@ -263,10 +272,13 @@ void NTFS::printName (const FileName& fName, const char* name, const uint32_t& d
 	for (int i = 0, j = 0; i < fName.filenameLength * 2; i += 2, j++)
 		fn[j] = name[i];
 	fn[fName.filenameLength] = '\0';
+
 	for (int i{}; i < depth; i++)
 		std::cout << "-";
+
 	if (fName.flags == 0x10000000)
 		std::cout << "Dir:  ";
+
 	std::cout << fn << std::endl;
 	delete fn;
 }
@@ -287,8 +299,9 @@ void NTFS::getMFTChain ()
 
 	uint8_t sequenceSize = comH.length - (attributeSize + sizeof CommonHeaderPart);
 	MFTChain = new uint8_t[sequenceSize + 1];
+
 	partition.seekg (attributeSize, partition.cur);
-	partition.read (reinterpret_cast<char *>(MFTChain), sequenceSize);
+	read (MFTChain, sequenceSize);
 	MFTChain[sequenceSize] = 0x00;
 }
 
@@ -299,19 +312,19 @@ void NTFS::moveToMFTChain (CommonHeaderPart& comH)
 	uint32_t attributeSize;
 
 	partition.seekg (startOffset, partition.beg);			// read 0x10 attribute offset
-	partition.read (reinterpret_cast<char *>(&mftH), sizeof MFTHeader);
+	read (&mftH, sizeof MFTHeader);
 
 	startOffset += mftH.firstAttributeOffset;
 	partition.seekg (startOffset + 0x04, partition.beg);			// read 0x30 attribute offset
-	partition.read (reinterpret_cast<char *>(&attributeSize), sizeof uint32_t);
+	read (&attributeSize, sizeof uint32_t);
 
 	startOffset += attributeSize;
 	partition.seekg (startOffset + 0x04, partition.beg);			// read 0x80 attribute offset
-	partition.read (reinterpret_cast<char *>(&attributeSize), sizeof uint32_t);
+	read (&attributeSize, sizeof uint32_t);
 
 	startOffset += attributeSize;
 	partition.seekg (startOffset, partition.beg);					// read 0x80 header
-	partition.read (reinterpret_cast<char *>(&comH), sizeof CommonHeaderPart);
+	read (&comH, sizeof CommonHeaderPart);
 }
 
 const uint8_t NTFS::RESERVED_MFT = 0x23;
