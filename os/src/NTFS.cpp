@@ -327,5 +327,5 @@ void NTFS::moveToMFTChain (CommonHeaderPart& comH)
 	read (&comH, sizeof CommonHeaderPart);
 }
 
-const uint8_t NTFS::RESERVED_MFT = 0x23;
+const uint8_t NTFS::RESERVED_MFT = 0x17;
 const uint32_t NTFS::END_MARKER = 0xFFFFFFFF;
