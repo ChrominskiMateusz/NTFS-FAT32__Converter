@@ -23,6 +23,7 @@ public:
 	void readBPB ();
 	void setPointer (const uint32_t& cluster);
 
+	bool doPrint;
 	BiosParameterBlock bpb;
 	std::fstream partition;
 	uint32_t bytesPerCluster;
