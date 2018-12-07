@@ -1,6 +1,5 @@
 #include "FATWrite.h"
 #include <Windows.h>
-#include <stdio.h>
 
 FATWrite::FATWrite (const std::string& partitionName)
 {

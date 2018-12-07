@@ -1,9 +1,6 @@
 #pragma once
-#include <stdint.h>
 #include <iostream>
 #include <fstream>
-#include <sstream>
-#include <string>
 #include "FATWrite.h"
 
 class NTFS
@@ -11,7 +8,9 @@ class NTFS
 public:
 	NTFS (const std::string& partitionName, const std::string& fatPartition);
 	~NTFS ();
+	void readMFT (const uint32_t& VCN, const uint32_t& dLvl);
 
+private:
 	template<class T>
 	void read (T* buffer, const uint32_t& size);
 	bool readAttributeHeader (CommonHeaderPart&, NonResidentHeader&, ResidentHeader&);
@@ -27,7 +26,6 @@ public:
 	void readIndexRecord (int32_t& size, uint64_t& lastOffset, const uint32_t& dLvl);
 	void readIndexRoot (int32_t& size, IndexRoot&, const uint32_t& depth);
 	void readINDX (const uint32_t& dLvl);
-	void readMFT (const uint32_t& VCN, const uint32_t& dLvl);
 	void readMFTHeader (const uint32_t& VCN, MFTHeader&);
 	void readNonResidentData (uint64_t& clustersAmount, int64_t& leftSize, const int64_t& fileSize);
 	void readPartitionBootSector ();
@@ -44,7 +42,7 @@ public:
 };
 
 template<class T>
-inline void NTFS::read (T* buffer, const uint32_t& size)
+void NTFS::read (T* buffer, const uint32_t& size)
 {
 	partition.read (reinterpret_cast<char *>(buffer), size);
 }

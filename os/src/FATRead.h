@@ -8,7 +8,11 @@ class FATRead
 public:
 	FATRead (const std::string& partitionName);
 	~FATRead ();
+	void printAll ();
+	
+	bool doPrint;
 
+private:
 	template<class T>
 	void read (T* buffer, const uint32_t& size);
 	bool isLastCluster (uint32_t& cluster);
@@ -18,12 +22,10 @@ public:
 	void directoryRead (const uint32_t& startCluster, const uint32_t& depth);
 	void fileRead (const uint32_t& startCluster, int32_t& fileSize);
 	void iterateDirectory (DirectoryEntry*, const uint32_t& bytesPerCluster, const uint32_t& depth);
-	void printAll ();
 	void printName (const DirectoryEntry&, const uint32_t& depth);
 	void readBPB ();
 	void setPointer (const uint32_t& cluster);
 
-	bool doPrint;
 	BiosParameterBlock bpb;
 	std::fstream partition;
 	uint32_t bytesPerCluster;
@@ -32,7 +34,7 @@ public:
 };
 
 template<class T>
-inline void FATRead::read (T* buffer, const uint32_t& size)
+void FATRead::read (T* buffer, const uint32_t& size)
 {
 	partition.read (reinterpret_cast<char *>(buffer), size);
 }
