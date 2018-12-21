@@ -42,6 +42,7 @@ private:
 	uint32_t copyOffset;
 	uint32_t dataOffset;
 	uint32_t fatOffset;
+	uint32_t writeOffset;
 };
 
 template<class T>

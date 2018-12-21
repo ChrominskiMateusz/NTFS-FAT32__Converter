@@ -42,40 +42,41 @@ void NTFS::readMFT (const uint32_t& VCN, const uint32_t& depth)
 	IndexRoot iRoot;
 
 	readMFTHeader (VCN, mftH);
-	while (true)									// iterate attributes
-	{
-		uint16_t chainIndex{};
-		uint32_t tmpOffset = partition.tellg ();
-
-		if (!readAttributeHeader (comH, nResH, resH))
-			break;
-
-		int32_t dataLength = comH.length - (static_cast<uint32_t>(partition.tellg ()) - tmpOffset);
-
-		switch (comH.attributeType)
+	if (mftH.magicNumber[0] == 'F')
+		while (true)									// iterate attributes
 		{
-		case Attributes::StandardInformation:;
-			read (&sInf, sizeof StandartInformation);
-			break;
-		case Attributes::FileName:
-			readFileName (fName, depth, mftH);
-			break;
-		case Attributes::ObjectID:
-			read (&oID, sizeof ObjectID);
-			break;
-		case Attributes::Data:
-			readData (dataLength, chainIndex, comH, resH, fName.realFileSize);
-			fat->writeEntry (fName.parentRecordNumberStart);
-			break;
-		case Attributes::IndexRoot:
-			readIndexRoot (dataLength, iRoot, depth);
-			break;
-		case Attributes::IndexAllocation:
-			readIndexAllocation (dataLength, chainIndex, depth);
-			break;
+			uint16_t chainIndex{};
+			uint32_t tmpOffset = partition.tellg ();
+
+			if (!readAttributeHeader (comH, nResH, resH))
+				break;
+
+			int32_t dataLength = comH.length - (static_cast<uint32_t>(partition.tellg ()) - tmpOffset);
+
+			switch (comH.attributeType)
+			{
+			case Attributes::StandardInformation:
+				read (&sInf, sizeof StandartInformation);
+				break;
+			case Attributes::FileName:
+				readFileName (fName, depth, mftH);
+				break;
+			case Attributes::ObjectID:
+				read (&oID, sizeof ObjectID);
+				break;
+			case Attributes::Data:
+				readData (dataLength, chainIndex, comH, resH, fName.realFileSize);
+				fat->writeEntry (fName.parentRecordNumberStart);
+				break;
+			case Attributes::IndexRoot:
+				readIndexRoot (dataLength, iRoot, depth);
+				break;
+			case Attributes::IndexAllocation:
+				readIndexAllocation (dataLength, chainIndex, depth);
+				break;
+			}
+			partition.seekg (tmpOffset + comH.length);
 		}
-		partition.seekg (tmpOffset + comH.length);
-	}
 }
 
 uint64_t NTFS::getVCNOffset (const uint32_t& VCN)
@@ -309,22 +310,24 @@ void NTFS::moveToMFTChain (CommonHeaderPart& comH)
 {
 	MFTHeader mftH;
 	uint32_t startOffset = bootSector.clusterNumberMFT * bootSector.bytesPerSector * bootSector.sectorsPerCluster;
-	uint32_t attributeSize;
-
-	partition.seekg (startOffset, partition.beg);			// read 0x10 attribute offset
+	
+	partition.seekg (startOffset, partition.beg);
 	read (&mftH, sizeof MFTHeader);
 
 	startOffset += mftH.firstAttributeOffset;
-	partition.seekg (startOffset + 0x04, partition.beg);			// read 0x30 attribute offset
-	read (&attributeSize, sizeof uint32_t);
+	partition.seekg (startOffset, partition.beg);
+	while (true)			// iterate attributes
+	{
+		uint32_t tmpOffset = partition.tellg ();
 
-	startOffset += attributeSize;
-	partition.seekg (startOffset + 0x04, partition.beg);			// read 0x80 attribute offset
-	read (&attributeSize, sizeof uint32_t);
+		read (&comH, sizeof CommonHeaderPart);
+		partition.seekg (comH.nameLength * 2, partition.cur);
 
-	startOffset += attributeSize;
-	partition.seekg (startOffset, partition.beg);					// read 0x80 header
-	read (&comH, sizeof CommonHeaderPart);
+		if (comH.attributeType == Attributes::Data)
+			break;
+
+		partition.seekg (tmpOffset + comH.length);
+	}
 }
 
 const uint8_t NTFS::RESERVED_MFT = 0x17;

@@ -1,7 +1,8 @@
 #include "FATWrite.h"
 #include <Windows.h>
 
-FATWrite::FATWrite (const std::string& partitionName)
+FATWrite::FATWrite (const std::string& partitionName) :
+	writeOffset{}
 {
 	partition.open (partitionName, std::ios::binary | std::ios::out | std::ios::in);
 }
@@ -172,7 +173,7 @@ void FATWrite::writeEntry (const uint32_t& depth)
 
 void FATWrite::writeData (char* buffer, const uint32_t& size, int64_t& leftSize, const uint64_t& fileSize)			// max size of buffer is bytesPerCluster
 {
-	int32_t clusterNumber;
+	int32_t clusterNumber;			// What if fat cluster size != ntfs cluster size?!
 	if (fileSize == leftSize)
 		clusterNumber = calculateClusterNumber ();
 	else
