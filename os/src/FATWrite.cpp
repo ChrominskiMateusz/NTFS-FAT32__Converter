@@ -173,7 +173,7 @@ void FATWrite::writeEntry (const uint32_t& depth)
 
 void FATWrite::writeData (char* buffer, const uint32_t& size, int64_t& leftSize, const uint64_t& fileSize)			// max size of buffer is bytesPerCluster
 {
-	int32_t clusterNumber;			// What if fat cluster size != ntfs cluster size?!
+	int32_t clusterNumber;
 	if (fileSize == leftSize)
 		clusterNumber = calculateClusterNumber ();
 	else
